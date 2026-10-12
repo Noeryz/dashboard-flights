@@ -6,10 +6,10 @@ export const loadAllFlightData = (): Promise<{
   coords: Record<string, AirportCoord>;
 }> => {
   return Promise.all([
-    fetch('/data/airports_coords.csv')
+    fetch(`${import.meta.env.BASE_URL}data/airports_coords.csv`)
       .then((res) => (res.ok ? res.text() : ''))
       .catch(() => ''),
-    fetch('/data/data_dashboard_final.csv').then((res) => {
+    fetch(`${import.meta.env.BASE_URL}data/data_dashboard_final.csv`).then((res) => {
       if (!res.ok) throw new Error('Gagal memuat public/data/data_dashboard_final.csv');
       return res.text();
     }),

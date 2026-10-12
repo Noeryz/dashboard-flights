@@ -11,6 +11,7 @@ interface LandingHeroProps {
 }
 
 export const LandingHero: React.FC<LandingHeroProps> = ({ onStartTransition }) => {
+  const baseUrl = import.meta.env.BASE_URL;
   const { rawRows } = useFlightStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -167,7 +168,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onStartTransition }) =
     <div ref={containerRef} className="relative w-full h-screen bg-slate-950 text-white overflow-hidden">
       <video
         ref={videoRef}
-        src="/videos/start.mp4"
+        src={`${baseUrl}videos/start.mp4`}
         muted
         playsInline
         preload="auto"

@@ -15,6 +15,7 @@ import { RelationshipsPanel } from './components/dashboard/RelationshipsPanel';
 import { MethodologyPanel } from './components/dashboard/MethodologyPanel';
 
 export default function App() {
+  const baseUrl = import.meta.env.BASE_URL;
   const [viewState, setViewState] = useState<'HERO' | 'TRANSITION' | 'DASHBOARD'>('HERO');
   const transitionVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -98,7 +99,7 @@ export default function App() {
         <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center overflow-hidden pointer-events-none">
           <video
             ref={transitionVideoRef}
-            src="/videos/transition.mp4"
+            src={`${baseUrl}videos/transition.mp4`}
             autoPlay
             muted
             playsInline
@@ -122,7 +123,7 @@ export default function App() {
           {/* Latar Belakang Gambar Pesawat */}
           <div className="fixed inset-0 z-0 pointer-events-none">
             <img
-              src="/images/bg-plane.png"
+              src={`${baseUrl}images/bg-plane.png`}
               alt="Latar Belakang Pesawat"
               className="w-full h-full object-cover opacity-75"
             />

@@ -13,11 +13,13 @@ export const TransitionOverlay: React.FC<TransitionOverlayProps> = ({
   destination = 'JFK',
   onComplete,
 }) => {
+  const baseUrl = import.meta.env.BASE_URL;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stage, setStage] = useState<'takeoff' | 'cockpit'>(type === 'enter' ? 'takeoff' : 'cockpit');
 
-  // String path langsung merujuk ke folder public/videos/
-  const currentVideo = stage === 'takeoff' ? '/videos/start.mp4' : '/videos/transition.mp4';
+  const currentVideo = stage === 'takeoff'
+    ? `${baseUrl}videos/start.mp4`
+    : `${baseUrl}videos/transition.mp4`;
 
   useEffect(() => {
     if (videoRef.current) {
