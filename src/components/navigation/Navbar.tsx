@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
-import { Plane, LayoutDashboard, Compass, BarChart3, Route as RouteIcon, Building2, Sliders, User } from 'lucide-react';
+import { Plane, LayoutDashboard, Compass, BarChart3, Route as RouteIcon, Building2, Sliders, User, Network, BookOpenCheck } from 'lucide-react';
 import type { ActiveMenu } from '../../types/flight';
 
 interface NavbarProps {
@@ -17,6 +17,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onReturnHero }) => {
     { id: 'ROUTE', label: 'Analisis Rute', icon: RouteIcon },
     { id: 'AIRPORT', label: 'Aktivitas Bandara', icon: Building2 },
     { id: 'FACTORS', label: 'Faktor Keterlambatan', icon: Sliders },
+    { id: 'RELATIONSHIPS', label: 'Hubungan & Model', icon: Network },
+    { id: 'METHODOLOGY', label: 'Data & Metodologi', icon: BookOpenCheck },
   ];
 
   return (
@@ -35,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onReturnHero }) => {
         </div>
       </div>
 
-      <nav className="hidden md:flex items-center gap-1 bg-slate-900/60 p-1 rounded-2xl border border-slate-800/80 backdrop-blur-md">
+      <nav className="hidden md:flex max-w-[68vw] items-center gap-1 overflow-x-auto rounded-2xl border border-slate-800/80 bg-slate-900/60 p-1 backdrop-blur-md">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeMenu === item.id;
@@ -44,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onReturnHero }) => {
             <button
               key={item.id}
               onClick={() => setActiveMenu(item.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                 isActive
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.35)]'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'

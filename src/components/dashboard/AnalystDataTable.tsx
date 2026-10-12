@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { Search, Database, ChevronLeft, ChevronRight } from 'lucide-react';
+import { InsightCard } from './InsightCard';
 
 export const AnalystDataTable: React.FC = () => {
   const { getFilteredRows } = useFlightStore();
@@ -13,9 +14,9 @@ export const AnalystDataTable: React.FC = () => {
   const searchedRows = filteredRows.filter((row) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    const carrier = String(row.CARRIER || row.carrier || '').toLowerCase();
-    const origin = String(row.ORIGIN || row.origin || '').toLowerCase();
-    const dest = String(row.DEST || row.dest || row.destination || '').toLowerCase();
+    const carrier = row.UNIQUE_CARRIER.toLowerCase();
+    const origin = row.ORIGIN.toLowerCase();
+    const dest = row.DEST.toLowerCase();
     return carrier.includes(term) || origin.includes(term) || dest.includes(term);
   });
 
@@ -60,20 +61,21 @@ export const AnalystDataTable: React.FC = () => {
               <th className="p-3">Tujuan</th>
               <th className="p-3">Passengers</th>
               <th className="p-3">Flight Volume</th>
-              <th className="p-3">Status Delay</th>
+              <th className="p-3">Penerbangan Terlambat</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {pageData.length > 0 ? (
               pageData.map((row, idx) => {
-                const year = row.YEAR || row.year || '2025';
-                const month = row.MONTH || row.month || '1';
-                const carrier = row.CARRIER || row.carrier || row.UNIQUE_CARRIER || 'DL';
-                const origin = row.ORIGIN || row.origin || 'ATL';
-                const dest = row.DEST || row.dest || row.destination || 'JFK';
-                const passengers = row.PASSENGERS || row.passengers || Math.floor(Math.random() * 5000 + 1200);
-                const flights = row.DEPARTURES_PERFORMED || row.flights || Math.floor(Math.random() * 40 + 10);
-                const isDelayed = idx % 3 === 0;
+                const year = row.YEAR;
+                const month = row.MONTH;
+                const carrier = row.UNIQUE_CARRIER;
+                const origin = row.ORIGIN;
+                const dest = row.DEST;
+                const passengers = row.PASSENGERS;
+                const flights = row.DEPARTURES_PERFORMED;
+                const delayedFlights = Number(row.ARR_DELAY_FLIGHTS) || 0;
+                const delayRate = Number(flights) > 0 ? (delayedFlights / Number(flights)) * 100 : 0;
 
                 return (
                   <tr key={idx} className="hover:bg-violet-500/10 transition-colors">
@@ -84,15 +86,7 @@ export const AnalystDataTable: React.FC = () => {
                     <td className="p-3 text-slate-200">{Number(passengers).toLocaleString('id-ID')}</td>
                     <td className="p-3 text-slate-200">{Number(flights).toLocaleString('id-ID')}</td>
                     <td className="p-3">
-                      {isDelayed ? (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px]">
-                          DELAYED
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px]">
-                          ON-TIME
-                        </span>
-                      )}
+                      <span className="text-slate-200">{delayedFlights.toLocaleString('id-ID')} ({delayRate.toFixed(1)}%)</span>
                     </td>
                   </tr>
                 );
@@ -128,6 +122,12 @@ export const AnalystDataTable: React.FC = () => {
             <ChevronRight className="w-4 h-4 text-violet-300" />
           </button>
         </div>
+        <InsightCard title="Unit analisis dan interpretasi tabel">
+          Satu baris adalah agregat bulanan maskapai–rute, bukan satu penerbangan individual. “Penerbangan
+          terlambat” menunjukkan jumlah agregat yang memiliki keterlambatan kedatangan; angka penumpang dan
+          volume juga merupakan total pada baris tersebut. Karena itu, tabel tidak menyediakan label on-time
+          individual dan tidak dapat dipakai untuk menilai penerbangan tertentu.
+        </InsightCard>
       </div>
     </div>
   );

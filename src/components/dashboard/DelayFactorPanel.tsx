@@ -29,13 +29,13 @@ export const DelayFactorPanel: React.FC = () => {
     rawRows.forEach((row) => {
       if (filters.year !== 'ALL' && String(row.YEAR) !== filters.year) return;
       if (filters.month !== 'ALL' && String(row.MONTH) !== filters.month) return;
-      if (filters.carrier !== 'ALL' && row.OP_UNIQUE_CARRIER !== filters.carrier) return;
+      if (filters.carrier !== 'ALL' && row.UNIQUE_CARRIER !== filters.carrier) return;
 
-      lateAircraft += Number(row.total_late_aircraft_delay) || 0;
-      carrier += Number(row.total_carrier_delay) || 0;
-      nas += Number(row.total_nas_delay) || 0;
-      weather += Number(row.total_weather_delay) || 0;
-      security += Number(row.total_security_delay) || 0;
+      lateAircraft += Number(row.LATE_AIRCRAFT_DELAY_MINUTES) || 0;
+      carrier += Number(row.CARRIER_DELAY_MINUTES) || 0;
+      nas += Number(row.NAS_DELAY_MINUTES) || 0;
+      weather += Number(row.WEATHER_DELAY_MINUTES) || 0;
+      security += Number(row.SECURITY_DELAY_MINUTES) || 0;
     });
 
     const totalMinutes = lateAircraft + carrier + nas + weather + security;
@@ -121,7 +121,7 @@ export const DelayFactorPanel: React.FC = () => {
                 </Pie>
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
-                  formatter={(val: any) => [`${val}%`, 'Kontribusi']}
+                  formatter={(val) => [`${val}%`, 'Kontribusi']}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
               </PieChart>

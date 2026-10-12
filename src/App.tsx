@@ -11,12 +11,14 @@ import { AirportPanel } from './components/dashboard/AirportPanel';
 import { FactorsPanel } from './components/dashboard/FactorsPanel';
 import { RoutePanel } from './components/dashboard/RoutePanel';
 import { AnalystDataTable } from './components/dashboard/AnalystDataTable';
+import { RelationshipsPanel } from './components/dashboard/RelationshipsPanel';
+import { MethodologyPanel } from './components/dashboard/MethodologyPanel';
 
 export default function App() {
   const [viewState, setViewState] = useState<'HERO' | 'TRANSITION' | 'DASHBOARD'>('HERO');
   const transitionVideoRef = useRef<HTMLVideoElement>(null);
 
-  const { setRawRows, setAirportCoords, activeMenu, setActiveMenu, setFilter, viewMode, filters } =
+  const { setRawRows, setAirportCoords, activeMenu, setActiveMenu, setFilter, viewMode } =
     useFlightStore();
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function App() {
   useEffect(() => {
     if (viewState === 'TRANSITION') {
       const video = transitionVideoRef.current;
-      let timer: NodeJS.Timeout;
+      let timer: ReturnType<typeof setTimeout>;
 
       if (video) {
         video.currentTime = 0;
@@ -151,6 +153,8 @@ export default function App() {
                 {activeMenu === 'AIRPORT' && <AirportPanel />}
                 {activeMenu === 'FACTORS' && <FactorsPanel />}
                 {activeMenu === 'ROUTE' && <RoutePanel />}
+                {activeMenu === 'RELATIONSHIPS' && <RelationshipsPanel />}
+                {activeMenu === 'METHODOLOGY' && <MethodologyPanel />}
 
                 {viewMode === 'analyst' && <AnalystDataTable />}
               </main>
@@ -160,7 +164,7 @@ export default function App() {
               <div className="flex items-center gap-2 text-cyan-400">
                 <span>ANALISIS PENERBANGAN</span>
                 <span className="text-slate-600">|</span>
-                <span className="text-slate-300">DATASET RESMI BTS T-100</span>
+                <span className="text-slate-300">DATASET ANALISIS BTS / T-100</span>
               </div>
               <div className="hidden sm:block text-slate-400">
                 Standar Estimasi Biaya FAA APO-100

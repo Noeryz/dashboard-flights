@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
-import { Sliders, Play, Pause, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Sliders, Play, Pause, ZoomIn, RotateCcw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import { InsightCard } from './InsightCard';
 
 export const FactorsPanel: React.FC = () => {
   const { getFilteredRows } = useFlightStore();
@@ -13,7 +14,7 @@ export const FactorsPanel: React.FC = () => {
   const [zoomScale, setZoomScale] = useState<number>(1);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isPlaying) {
       interval = setInterval(() => {
         setSimulatedMonth((prev) => {
@@ -50,12 +51,13 @@ export const FactorsPanel: React.FC = () => {
       { factor: 'Keamanan (Security)', minutes: Math.round(securityMin), color: '#10b981' },
     ];
 
-    if (zoomScale > 1) {
-      return items.filter((f) => f.minutes > 0).sort((a, b) => b.minutes - a.minutes).slice(0, 3);
-    }
-
     return items;
-  }, [filteredRows, simulatedMonth, zoomScale]);
+  }, [filteredRows, simulatedMonth]);
+  const visibleFactorsData = zoomScale > 1
+    ? [...factorsData].filter((factor) => factor.minutes > 0).sort((a, b) => b.minutes - a.minutes).slice(0, 3)
+    : factorsData;
+  const totalDelayMinutes = factorsData.reduce((total, factor) => total + factor.minutes, 0);
+  const leadingFactor = [...factorsData].sort((a, b) => b.minutes - a.minutes)[0];
 
   return (
     <div className="space-y-6">
@@ -117,22 +119,30 @@ export const FactorsPanel: React.FC = () => {
 
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={factorsData}>
+            <BarChart data={visibleFactorsData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
               <XAxis dataKey="factor" stroke="#94a3b8" fontSize={11} tickLine={false} />
               <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
-                formatter={(val: any) => [`${Number(val).toLocaleString('id-ID')} Menit`, 'Total Delay']}
+                formatter={(val) => [`${Number(val).toLocaleString('id-ID')} Menit`, 'Total Delay']}
               />
               <Bar dataKey="minutes" radius={[6, 6, 0, 0]}>
-                {factorsData.map((entry, index) => (
+                {visibleFactorsData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <InsightCard title="Insight penyebab keterlambatan">
+          {leadingFactor && totalDelayMinutes > 0
+            ? `${leadingFactor.factor} merupakan kontributor terbesar pada filter ini, sebesar ${leadingFactor.minutes.toLocaleString('id-ID')} menit (${((leadingFactor.minutes / totalDelayMinutes) * 100).toFixed(1)}% dari total lima kategori).`
+            : 'Belum ada menit keterlambatan yang tercatat pada filter ini.'}{' '}
+          Nilai adalah akumulasi menit delay yang dilaporkan per kategori, bukan jumlah kejadian. Kategori bisa
+          menunjukkan bagian dari sistem yang mencatat keterlambatan; asosiasi kategori tidak membuktikan penyebab
+          tunggal atau hubungan kausal.
+        </InsightCard>
       </div>
     </div>
   );

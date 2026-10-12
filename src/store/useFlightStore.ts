@@ -93,7 +93,7 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
   resetFilters: () => set({ filters: initialFilters }),
 
   swapRoute: () => {
-    const { filters, getAirportsForOriginCity, getAvailableDestinationCities, getAirportsForDestinationCity } = get();
+    const { filters, getAvailableDestinationCities, getAirportsForDestinationCity } = get();
     const newOriginCity = filters.destinationCity;
     const newOriginApt = filters.destination;
 

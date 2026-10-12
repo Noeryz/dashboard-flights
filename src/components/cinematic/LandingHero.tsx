@@ -11,7 +11,7 @@ interface LandingHeroProps {
 }
 
 export const LandingHero: React.FC<LandingHeroProps> = ({ onStartTransition }) => {
-  const { nationalKPIs, rawRows } = useFlightStore();
+  const { rawRows } = useFlightStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -28,42 +28,39 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onStartTransition }) =
     const carriersSet = new Set<string>();
 
     if (rawRows && rawRows.length > 0) {
-      rawRows.forEach((r: any) => {
-        const flights = Number(r.DEPARTURES_PERFORMED || r.flights || 1);
-        const cancelled = Number(r.CANCELLED || r.cancelled || 0);
-        const diverted = Number(r.DIVERTED || r.diverted || 0);
-        const delayMin = Number(r.DEP_DELAY || r.dep_delay || r.ARR_DELAY || 0);
-        const carrier = String(r.CARRIER_NAME || r.UNIQUE_CARRIER || r.carrier || '').trim();
+      rawRows.forEach((r) => {
+        const flights = Number(r.DEPARTURES_PERFORMED || 0);
+        const cancelled = Number(r.CANCELLED_FLIGHTS || 0);
+        const diverted = Number(r.DIVERTED_FLIGHTS || 0);
+        const delayMin = Number(r.TOTAL_ARR_DELAY_MINUTES || 0);
+        const delayedFlights = Number(r.ARR_DELAY_FLIGHTS || 0);
+        const carrier = r.UNIQUE_CARRIER.trim();
 
         totalFlights += flights;
         totalCancelled += cancelled;
         totalDiverted += diverted;
 
-        if (delayMin > 0) {
-          totalDelayMinutes += delayMin * flights;
-        }
-        if (delayMin > 15) {
-          delayedFlightsCount += flights;
-        }
+        totalDelayMinutes += delayMin;
+        delayedFlightsCount += delayedFlights;
 
         if (carrier) carriersSet.add(carrier);
       });
     }
 
-    const displayFlights = totalFlights > 0 ? totalFlights : (nationalKPIs?.totalFlights || 997120);
-    const displayCancelled = totalCancelled > 0 ? totalCancelled : (nationalKPIs?.totalCancelled || 9640);
-    const displayDiverted = totalDiverted > 0 ? totalDiverted : (nationalKPIs?.totalDiverted || 1930);
+    const displayFlights = totalFlights || 997120;
+    const displayCancelled = totalCancelled || 9640;
+    const displayDiverted = totalDiverted || 1930;
 
-    const avgDelayNum = totalFlights > 0 && totalDelayMinutes > 0 
-      ? (totalDelayMinutes / totalFlights).toFixed(2) 
-      : (nationalKPIs?.avgDelayMinutes != null ? nationalKPIs.avgDelayMinutes.toString() : '10.75');
+    const avgDelayNum = delayedFlightsCount > 0
+      ? (totalDelayMinutes / delayedFlightsCount).toFixed(2)
+      : '10.75';
 
     // MENGATASI DELAY RATE 0.00% DENGAN FALLBACK DATA NASIONAL JIKA DELAYEDFLIGHTS = 0
-    const delayRateNum = totalFlights > 0 && delayedFlightsCount > 0 
-      ? ((delayedFlightsCount / totalFlights) * 100).toFixed(2) 
-      : (nationalKPIs?.overallDelayRate != null ? nationalKPIs.overallDelayRate.toString() : '17.10');
+    const delayRateNum = totalFlights > 0 && delayedFlightsCount > 0
+      ? ((delayedFlightsCount / totalFlights) * 100).toFixed(2)
+      : '17.10';
 
-    const carriersCount = carriersSet.size > 0 ? carriersSet.size : (nationalKPIs?.totalCarriers || 17);
+    const carriersCount = carriersSet.size || 17;
 
     const formatCompact = (num: number): string => {
       if (num >= 1_000_000) return (num / 1_000_000).toFixed(2) + 'M';
@@ -79,7 +76,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onStartTransition }) =
       delayRate: `${delayRateNum}%`,
       carriersServed: carriersCount.toString()
     };
-  }, [rawRows, nationalKPIs]);
+  }, [rawRows]);
 
   // ANIMASI GULIR (SCROLL SCRUB) VIDEO
   useEffect(() => {

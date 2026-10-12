@@ -101,7 +101,6 @@ export const US_AIRPORT_NAMES: Record<string, string> = {
   PIT: 'Pittsburgh International Airport',
   RDU: 'Raleigh-Durham International Airport',
   RSW: 'Southwest Florida International Airport',
-  SAN: 'San Diego International Airport',
   SAT: 'San Antonio International Airport',
   SJC: 'Norman Y. Mineta San Jose International Airport',
   SJU: 'Luis Muñoz Marín International Airport',

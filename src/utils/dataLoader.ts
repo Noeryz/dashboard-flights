@@ -16,7 +16,7 @@ export const loadAllFlightData = (): Promise<{
   ]).then(([coordsText, flightsText]) => {
     const coordsMap: Record<string, AirportCoord> = {};
     if (coordsText) {
-      Papa.parse<any>(coordsText, {
+      Papa.parse<Record<string, string>>(coordsText, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
@@ -43,7 +43,7 @@ export const loadAllFlightData = (): Promise<{
           complete: (results) => {
             resolve({ rows: results.data, coords: coordsMap });
           },
-          error: (err) => reject(err),
+          error: (err: Error) => reject(err),
         });
       }
     );

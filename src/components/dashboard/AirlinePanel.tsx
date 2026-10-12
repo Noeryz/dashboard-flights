@@ -37,9 +37,9 @@ export const AirlinePanel: React.FC = () => {
     rawRows.forEach((row) => {
       if (filters.year !== 'ALL' && String(row.YEAR) !== filters.year) return;
       if (filters.month !== 'ALL' && String(row.MONTH) !== filters.month) return;
-      if (filters.carrier !== 'ALL' && row.OP_UNIQUE_CARRIER !== filters.carrier) return;
+      if (filters.carrier !== 'ALL' && row.UNIQUE_CARRIER !== filters.carrier) return;
 
-      const code = row.OP_UNIQUE_CARRIER || 'Unknown';
+      const code = row.UNIQUE_CARRIER || 'Unknown';
       if (!map[code]) {
         map[code] = {
           code,
@@ -54,24 +54,23 @@ export const AirlinePanel: React.FC = () => {
         };
       }
 
-      const tf = Number(row.total_flights) || 0;
-      const avgDelay = Number(row.avg_arr_delay) || 0;
+      const tf = Number(row.DEPARTURES_PERFORMED) || 0;
+      const delayedFlights = Number(row.ARR_DELAY_FLIGHTS) || 0;
+      const delayMinutes = Number(row.TOTAL_ARR_DELAY_MINUTES) || 0;
 
       map[code].totalFlights += tf;
-      map[code].delayedFlights += Number(row.delayed_flights) || 0;
-      map[code].cancelledFlights += Number(row.cancelled_flights) || 0;
-      map[code].weightedArrDelay += avgDelay * tf;
-      if (avgDelay > 0) {
-        map[code].totalDelayMinutes += avgDelay * tf;
-      }
-      map[code].totalSeats += Number(row.total_seats) || 0;
-      map[code].totalPassengers += Number(row.total_passengers) || 0;
+      map[code].delayedFlights += delayedFlights;
+      map[code].cancelledFlights += Number(row.CANCELLED_FLIGHTS) || 0;
+      map[code].weightedArrDelay += delayMinutes;
+      map[code].totalDelayMinutes += delayMinutes;
+      map[code].totalSeats += Number(row.SEATS) || 0;
+      map[code].totalPassengers += Number(row.PASSENGERS) || 0;
     });
 
     return Object.values(map)
       .map((item) => {
         const delayRate = item.totalFlights > 0 ? (item.delayedFlights / item.totalFlights) * 100 : 0;
-        const avgDelay = item.totalFlights > 0 ? item.weightedArrDelay / item.totalFlights : 0;
+        const avgDelay = item.delayedFlights > 0 ? item.weightedArrDelay / item.delayedFlights : 0;
         const cancelRate = item.totalFlights > 0 ? (item.cancelledFlights / item.totalFlights) * 100 : 0;
         const loadFactor = item.totalSeats > 0 ? (item.totalPassengers / item.totalSeats) * 100 : 0;
         const economicLossUSD = item.totalDelayMinutes * FAA_ECONOMIC_CONSTANTS.TOTAL_COST_PER_MIN_USD;

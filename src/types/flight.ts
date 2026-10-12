@@ -1,4 +1,12 @@
-export type ActiveMenu = 'OVERVIEW' | 'INSIGHTS' | 'AIRLINE' | 'ROUTE' | 'AIRPORT' | 'FACTORS';
+export type ActiveMenu =
+  | 'OVERVIEW'
+  | 'INSIGHTS'
+  | 'AIRLINE'
+  | 'ROUTE'
+  | 'AIRPORT'
+  | 'FACTORS'
+  | 'RELATIONSHIPS'
+  | 'METHODOLOGY';
 export type ViewMode = 'public' | 'analyst';
 
 export interface RawFlightRow {

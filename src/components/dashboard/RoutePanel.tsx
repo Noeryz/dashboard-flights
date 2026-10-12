@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useFlightStore } from '../../store/useFlightStore';
 import {
-  Plane,
   MapPin,
   Play,
   Pause,
@@ -32,71 +33,58 @@ interface AirportData {
   name: string;
   city: string;
   state?: string;
-  lat: number;
-  lng: number;
-  baseLoadFactor: number;
-  baseDelayRate: number;
+  lat?: number;
+  lng?: number;
 }
-
-// Helper Koordinat Konsisten (Deterministik) tanpa Math.random()
-const getFallbackCoords = (code: string) => {
-  let hash = 0;
-  for (let i = 0; i < code.length; i++) {
-    hash = code.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const lat = 26 + (Math.abs(hash % 2000) / 100);
-  const lng = -122 + (Math.abs((hash >> 3) % 4500) / 100);
-  return { lat, lng };
-};
 
 // Master Lookup Bandara Utama US
 const MASTER_AIRPORTS: Record<string, AirportData> = {
-  ATL: { code: 'ATL', name: 'Hartsfield-Jackson Atlanta International Airport', city: 'Atlanta', state: 'GA', lat: 33.6407, lng: -84.4277, baseLoadFactor: 86.2, baseDelayRate: 14.5 },
-  LAX: { code: 'LAX', name: 'Los Angeles International Airport', city: 'Los Angeles', state: 'CA', lat: 33.9416, lng: -118.4085, baseLoadFactor: 88.5, baseDelayRate: 18.2 },
-  ORD: { code: 'ORD', name: "Chicago O'Hare International Airport", city: 'Chicago', state: 'IL', lat: 41.9742, lng: -87.9073, baseLoadFactor: 84.1, baseDelayRate: 21.4 },
-  DFW: { code: 'DFW', name: 'Dallas/Fort Worth International Airport', city: 'Dallas', state: 'TX', lat: 32.8998, lng: -97.0403, baseLoadFactor: 85.7, baseDelayRate: 16.8 },
-  DEN: { code: 'DEN', name: 'Denver International Airport', city: 'Denver', state: 'CO', lat: 39.8561, lng: -104.6737, baseLoadFactor: 87.3, baseDelayRate: 15.1 },
-  JFK: { code: 'JFK', name: 'John F. Kennedy International Airport', city: 'New York', state: 'NY', lat: 40.6413, lng: -73.7781, baseLoadFactor: 89.1, baseDelayRate: 22.8 },
-  SFO: { code: 'SFO', name: 'San Francisco International Airport', city: 'San Francisco', state: 'CA', lat: 37.6213, lng: -122.3790, baseLoadFactor: 86.8, baseDelayRate: 19.5 },
-  SEA: { code: 'SEA', name: 'Seattle-Tacoma International Airport', city: 'Seattle', state: 'WA', lat: 47.4502, lng: -122.3088, baseLoadFactor: 85.0, baseDelayRate: 13.9 },
-  LAS: { code: 'LAS', name: 'Harry Reid International Airport', city: 'Las Vegas', state: 'NV', lat: 36.0840, lng: -115.1537, baseLoadFactor: 90.2, baseDelayRate: 12.4 },
-  MCO: { code: 'MCO', name: 'Orlando International Airport', city: 'Orlando', state: 'FL', lat: 28.4312, lng: -81.3081, baseLoadFactor: 91.5, baseDelayRate: 17.6 },
-  EWR: { code: 'EWR', name: 'Newark Liberty International Airport', city: 'Newark', state: 'NJ', lat: 40.6895, lng: -74.1745, baseLoadFactor: 83.9, baseDelayRate: 25.1 },
-  CLT: { code: 'CLT', name: 'Charlotte Douglas International Airport', city: 'Charlotte', state: 'NC', lat: 35.2144, lng: -80.9431, baseLoadFactor: 84.8, baseDelayRate: 15.7 },
-  PHX: { code: 'PHX', name: 'Phoenix Sky Harbor International Airport', city: 'Phoenix', state: 'AZ', lat: 33.4352, lng: -112.0101, baseLoadFactor: 86.0, baseDelayRate: 13.2 },
-  MIA: { code: 'MIA', name: 'Miami International Airport', city: 'Miami', state: 'FL', lat: 25.7959, lng: -80.2870, baseLoadFactor: 87.9, baseDelayRate: 18.9 },
-  IAH: { code: 'IAH', name: 'George Bush Intercontinental Airport', city: 'Houston', state: 'TX', lat: 29.9902, lng: -95.3368, baseLoadFactor: 83.5, baseDelayRate: 16.3 },
-  BOS: { code: 'BOS', name: 'General Edward Lawrence Logan International Airport', city: 'Boston', state: 'MA', lat: 42.3656, lng: -71.0096, baseLoadFactor: 85.4, baseDelayRate: 20.1 },
-  MSP: { code: 'MSP', name: 'Minneapolis-Saint Paul International Airport', city: 'Minneapolis', state: 'MN', lat: 44.8848, lng: -93.2223, baseLoadFactor: 84.0, baseDelayRate: 11.8 },
-  FLL: { code: 'FLL', name: 'Fort Lauderdale-Hollywood International Airport', city: 'Fort Lauderdale', state: 'FL', lat: 26.0742, lng: -80.1506, baseLoadFactor: 89.8, baseDelayRate: 19.2 },
-  DTW: { code: 'DTW', name: 'Detroit Metropolitan Wayne County Airport', city: 'Detroit', state: 'MI', lat: 42.2162, lng: -83.3554, baseLoadFactor: 82.6, baseDelayRate: 14.2 },
-  PHL: { code: 'PHL', name: 'Philadelphia International Airport', city: 'Philadelphia', state: 'PA', lat: 39.8744, lng: -75.2424, baseLoadFactor: 83.1, baseDelayRate: 18.7 },
-  LGA: { code: 'LGA', name: 'LaGuardia Airport', city: 'New York', state: 'NY', lat: 40.7769, lng: -73.8740, baseLoadFactor: 87.2, baseDelayRate: 23.4 },
-  BWI: { code: 'BWI', name: 'Baltimore/Washington International Thurgood Marshall Airport', city: 'Baltimore', state: 'MD', lat: 39.1774, lng: -76.6684, baseLoadFactor: 85.1, baseDelayRate: 15.0 },
-  SLC: { code: 'SLC', name: 'Salt Lake City International Airport', city: 'Salt Lake City', state: 'UT', lat: 40.7899, lng: -111.9791, baseLoadFactor: 86.4, baseDelayRate: 10.9 },
-  SAN: { code: 'SAN', name: 'San Diego International Airport', city: 'San Diego', state: 'CA', lat: 32.7338, lng: -117.1933, baseLoadFactor: 88.0, baseDelayRate: 14.8 },
-  IAD: { code: 'IAD', name: 'Washington Dulles International Airport', city: 'Washington D.C.', state: 'VA', lat: 38.9531, lng: -77.4565, baseLoadFactor: 82.9, baseDelayRate: 16.0 },
-  DCA: { code: 'DCA', name: 'Ronald Reagan Washington National Airport', city: 'Washington D.C.', state: 'VA', lat: 38.8512, lng: -77.0402, baseLoadFactor: 86.7, baseDelayRate: 17.5 },
-  MDW: { code: 'MDW', name: 'Chicago Midway International Airport', city: 'Chicago', state: 'IL', lat: 41.7868, lng: -87.7522, baseLoadFactor: 85.9, baseDelayRate: 19.8 },
-  TPA: { code: 'TPA', name: 'Tampa International Airport', city: 'Tampa', state: 'FL', lat: 27.9772, lng: -82.5311, baseLoadFactor: 88.4, baseDelayRate: 16.1 },
-  PDX: { code: 'PDX', name: 'Portland International Airport', city: 'Portland', state: 'OR', lat: 45.5898, lng: -122.5951, baseLoadFactor: 84.6, baseDelayRate: 12.1 },
-  HNL: { code: 'HNL', name: 'Daniel K. Inouye International Airport', city: 'Honolulu', state: 'HI', lat: 21.3187, lng: -157.9225, baseLoadFactor: 92.4, baseDelayRate: 9.8 },
-  BNA: { code: 'BNA', name: 'Nashville International Airport', city: 'Nashville', state: 'TN', lat: 36.1263, lng: -86.6774, baseLoadFactor: 87.6, baseDelayRate: 15.4 },
-  AUS: { code: 'AUS', name: 'Austin-Bergstrom International Airport', city: 'Austin', state: 'TX', lat: 30.1975, lng: -97.6664, baseLoadFactor: 86.9, baseDelayRate: 14.9 },
-  STL: { code: 'STL', name: 'St. Louis Lambert International Airport', city: 'St. Louis', state: 'MO', lat: 38.7499, lng: -90.3648, baseLoadFactor: 83.4, baseDelayRate: 13.7 },
-  SJC: { code: 'SJC', name: 'Norman Y. Mineta San Jose International Airport', city: 'San Jose', state: 'CA', lat: 37.3639, lng: -121.9289, baseLoadFactor: 84.2, baseDelayRate: 15.8 },
-  SMF: { code: 'SMF', name: 'Sacramento International Airport', city: 'Sacramento', state: 'CA', lat: 38.6954, lng: -121.5908, baseLoadFactor: 85.3, baseDelayRate: 13.1 },
-  MSY: { code: 'MSY', name: 'Louis Armstrong New Orleans International Airport', city: 'New Orleans', state: 'LA', lat: 29.9934, lng: -90.2580, baseLoadFactor: 86.5, baseDelayRate: 16.9 },
-  RDU: { code: 'RDU', name: 'Raleigh-Durham International Airport', city: 'Raleigh', state: 'NC', lat: 35.8776, lng: -78.7875, baseLoadFactor: 84.7, baseDelayRate: 14.1 },
-  MCI: { code: 'MCI', name: 'Kansas City International Airport', city: 'Kansas City', state: 'MO', lat: 39.2976, lng: -94.7139, baseLoadFactor: 82.8, baseDelayRate: 13.5 },
-  CLE: { code: 'CLE', name: 'Cleveland-Hopkins International Airport', city: 'Cleveland', state: 'OH', lat: 41.4058, lng: -81.8539, baseLoadFactor: 81.9, baseDelayRate: 15.3 },
-  SAT: { code: 'SAT', name: 'San Antonio International Airport', city: 'San Antonio', state: 'TX', lat: 29.5337, lng: -98.4698, baseLoadFactor: 83.8, baseDelayRate: 14.0 },
-  PIT: { code: 'PIT', name: 'Pittsburgh International Airport', city: 'Pittsburgh', state: 'PA', lat: 40.4915, lng: -80.2329, baseLoadFactor: 82.1, baseDelayRate: 14.6 },
-  IND: { code: 'IND', name: 'Indianapolis International Airport', city: 'Indianapolis', state: 'IN', lat: 39.7173, lng: -86.2944, baseLoadFactor: 83.0, baseDelayRate: 12.9 },
-  CVG: { code: 'CVG', name: 'Cincinnati/Northern Kentucky International Airport', city: 'Cincinnati', state: 'OH', lat: 39.0461, lng: -84.6621, baseLoadFactor: 81.5, baseDelayRate: 13.8 },
-  CMH: { code: 'CMH', name: 'John Glenn Columbus International Airport', city: 'Columbus', state: 'OH', lat: 39.9980, lng: -82.8919, baseLoadFactor: 82.3, baseDelayRate: 13.3 },
-  OGG: { code: 'OGG', name: 'Kahului Airport', city: 'Maui', state: 'HI', lat: 20.8986, lng: -156.4305, baseLoadFactor: 91.8, baseDelayRate: 10.2 },
-  ANC: { code: 'ANC', name: 'Ted Stevens Anchorage International Airport', city: 'Anchorage', state: 'AK', lat: 61.1744, lng: -149.9963, baseLoadFactor: 80.5, baseDelayRate: 11.5 },
+  ATL: { code: 'ATL', name: 'Hartsfield-Jackson Atlanta International Airport', city: 'Atlanta', state: 'GA', lat: 33.6407, lng: -84.4277 },
+  LAX: { code: 'LAX', name: 'Los Angeles International Airport', city: 'Los Angeles', state: 'CA', lat: 33.9416, lng: -118.4085 },
+  ORD: { code: 'ORD', name: "Chicago O'Hare International Airport", city: 'Chicago', state: 'IL', lat: 41.9742, lng: -87.9073 },
+  DFW: { code: 'DFW', name: 'Dallas/Fort Worth International Airport', city: 'Dallas', state: 'TX', lat: 32.8998, lng: -97.0403 },
+  DEN: { code: 'DEN', name: 'Denver International Airport', city: 'Denver', state: 'CO', lat: 39.8561, lng: -104.6737 },
+  JFK: { code: 'JFK', name: 'John F. Kennedy International Airport', city: 'New York', state: 'NY', lat: 40.6413, lng: -73.7781 },
+  SFO: { code: 'SFO', name: 'San Francisco International Airport', city: 'San Francisco', state: 'CA', lat: 37.6213, lng: -122.3790 },
+  SEA: { code: 'SEA', name: 'Seattle-Tacoma International Airport', city: 'Seattle', state: 'WA', lat: 47.4502, lng: -122.3088 },
+  LAS: { code: 'LAS', name: 'Harry Reid International Airport', city: 'Las Vegas', state: 'NV', lat: 36.0840, lng: -115.1537 },
+  MCO: { code: 'MCO', name: 'Orlando International Airport', city: 'Orlando', state: 'FL', lat: 28.4312, lng: -81.3081 },
+  EWR: { code: 'EWR', name: 'Newark Liberty International Airport', city: 'Newark', state: 'NJ', lat: 40.6895, lng: -74.1745 },
+  CLT: { code: 'CLT', name: 'Charlotte Douglas International Airport', city: 'Charlotte', state: 'NC', lat: 35.2144, lng: -80.9431 },
+  PHX: { code: 'PHX', name: 'Phoenix Sky Harbor International Airport', city: 'Phoenix', state: 'AZ', lat: 33.4352, lng: -112.0101 },
+  MIA: { code: 'MIA', name: 'Miami International Airport', city: 'Miami', state: 'FL', lat: 25.7959, lng: -80.2870 },
+  IAH: { code: 'IAH', name: 'George Bush Intercontinental Airport', city: 'Houston', state: 'TX', lat: 29.9902, lng: -95.3368 },
+  BOS: { code: 'BOS', name: 'General Edward Lawrence Logan International Airport', city: 'Boston', state: 'MA', lat: 42.3656, lng: -71.0096 },
+  MSP: { code: 'MSP', name: 'Minneapolis-Saint Paul International Airport', city: 'Minneapolis', state: 'MN', lat: 44.8848, lng: -93.2223 },
+  FLL: { code: 'FLL', name: 'Fort Lauderdale-Hollywood International Airport', city: 'Fort Lauderdale', state: 'FL', lat: 26.0742, lng: -80.1506 },
+  DTW: { code: 'DTW', name: 'Detroit Metropolitan Wayne County Airport', city: 'Detroit', state: 'MI', lat: 42.2162, lng: -83.3554 },
+  PHL: { code: 'PHL', name: 'Philadelphia International Airport', city: 'Philadelphia', state: 'PA', lat: 39.8744, lng: -75.2424 },
+  LGA: { code: 'LGA', name: 'LaGuardia Airport', city: 'New York', state: 'NY', lat: 40.7769, lng: -73.8740 },
+  BWI: { code: 'BWI', name: 'Baltimore/Washington International Thurgood Marshall Airport', city: 'Baltimore', state: 'MD', lat: 39.1774, lng: -76.6684 },
+  SLC: { code: 'SLC', name: 'Salt Lake City International Airport', city: 'Salt Lake City', state: 'UT', lat: 40.7899, lng: -111.9791 },
+  SAN: { code: 'SAN', name: 'San Diego International Airport', city: 'San Diego', state: 'CA', lat: 32.7338, lng: -117.1933 },
+  IAD: { code: 'IAD', name: 'Washington Dulles International Airport', city: 'Washington D.C.', state: 'VA', lat: 38.9531, lng: -77.4565 },
+  DCA: { code: 'DCA', name: 'Ronald Reagan Washington National Airport', city: 'Washington D.C.', state: 'VA', lat: 38.8512, lng: -77.0402 },
+  MDW: { code: 'MDW', name: 'Chicago Midway International Airport', city: 'Chicago', state: 'IL', lat: 41.7868, lng: -87.7522 },
+  TPA: { code: 'TPA', name: 'Tampa International Airport', city: 'Tampa', state: 'FL', lat: 27.9772, lng: -82.5311 },
+  PDX: { code: 'PDX', name: 'Portland International Airport', city: 'Portland', state: 'OR', lat: 45.5898, lng: -122.5951 },
+  HNL: { code: 'HNL', name: 'Daniel K. Inouye International Airport', city: 'Honolulu', state: 'HI', lat: 21.3187, lng: -157.9225 },
+  BNA: { code: 'BNA', name: 'Nashville International Airport', city: 'Nashville', state: 'TN', lat: 36.1263, lng: -86.6774 },
+  AUS: { code: 'AUS', name: 'Austin-Bergstrom International Airport', city: 'Austin', state: 'TX', lat: 30.1975, lng: -97.6664 },
+  STL: { code: 'STL', name: 'St. Louis Lambert International Airport', city: 'St. Louis', state: 'MO', lat: 38.7499, lng: -90.3648 },
+  SJC: { code: 'SJC', name: 'Norman Y. Mineta San Jose International Airport', city: 'San Jose', state: 'CA', lat: 37.3639, lng: -121.9289 },
+  SMF: { code: 'SMF', name: 'Sacramento International Airport', city: 'Sacramento', state: 'CA', lat: 38.6954, lng: -121.5908 },
+  MSY: { code: 'MSY', name: 'Louis Armstrong New Orleans International Airport', city: 'New Orleans', state: 'LA', lat: 29.9934, lng: -90.2580 },
+  RDU: { code: 'RDU', name: 'Raleigh-Durham International Airport', city: 'Raleigh', state: 'NC', lat: 35.8776, lng: -78.7875 },
+  MCI: { code: 'MCI', name: 'Kansas City International Airport', city: 'Kansas City', state: 'MO', lat: 39.2976, lng: -94.7139 },
+  CLE: { code: 'CLE', name: 'Cleveland-Hopkins International Airport', city: 'Cleveland', state: 'OH', lat: 41.4058, lng: -81.8539 },
+  SAT: { code: 'SAT', name: 'San Antonio International Airport', city: 'San Antonio', state: 'TX', lat: 29.5337, lng: -98.4698 },
+  PIT: { code: 'PIT', name: 'Pittsburgh International Airport', city: 'Pittsburgh', state: 'PA', lat: 40.4915, lng: -80.2329 },
+  IND: { code: 'IND', name: 'Indianapolis International Airport', city: 'Indianapolis', state: 'IN', lat: 39.7173, lng: -86.2944 },
+  CVG: { code: 'CVG', name: 'Cincinnati/Northern Kentucky International Airport', city: 'Cincinnati', state: 'OH', lat: 39.0461, lng: -84.6621 },
+  CMH: { code: 'CMH', name: 'John Glenn Columbus International Airport', city: 'Columbus', state: 'OH', lat: 39.9980, lng: -82.8919 },
+  OGG: { code: 'OGG', name: 'Kahului Airport', city: 'Maui', state: 'HI', lat: 20.8986, lng: -156.4305 },
+  ANC: { code: 'ANC', name: 'Ted Stevens Anchorage International Airport', city: 'Anchorage', state: 'AK', lat: 61.1744, lng: -149.9963 },
 };
 
 type MapTileType = 'dark' | 'satellite' | 'streets' | 'terrain';
@@ -125,20 +113,19 @@ const TILE_URLS: Record<MapTileType, { url: string; attribution: string; name: s
 };
 
 export const RoutePanel: React.FC = () => {
-  let filteredRows: any[] = [];
-  try {
-    const store = useFlightStore();
-    if (store && typeof store.getFilteredRows === 'function') {
-      filteredRows = store.getFilteredRows();
-    }
-  } catch (e) {
-    // Fallback
-  }
+  const { rawRows, filters, setRouteSelection, airportCoords } = useFlightStore();
 
-  const [selectedOriginCity, setSelectedOriginCity] = useState<string>('Semua Kota');
-  const [selectedDestCity, setSelectedDestCity] = useState<string>('Semua Kota');
-  const [origin, setOrigin] = useState<string>('LAX');
-  const [destination, setDestination] = useState<string>('JFK');
+  const { origin, destination } = filters;
+  const filteredRows = useMemo(
+    () => rawRows.filter((row) =>
+      (filters.year === 'ALL' || String(row.YEAR || '') === filters.year) &&
+      (filters.month === 'ALL' || String(row.MONTH || '') === filters.month) &&
+      (filters.carrier === 'ALL' || String(row.UNIQUE_CARRIER || '').trim().toUpperCase() === filters.carrier),
+    ),
+    [rawRows, filters.year, filters.month, filters.carrier],
+  );
+  const selectedOriginCity = filters.originCity;
+  const selectedDestCity = filters.destinationCity;
 
   const [originSearch, setOriginSearch] = useState<string>('');
   const [destSearch, setDestSearch] = useState<string>('');
@@ -146,8 +133,6 @@ export const RoutePanel: React.FC = () => {
   const [mapType, setMapType] = useState<MapTileType>('dark');
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [simSpeed, setSimSpeed] = useState<number>(1);
-  const [leafletLoaded, setLeafletLoaded] = useState<boolean>(false);
-
   const [telemetry, setTelemetry] = useState({
     lat: 33.9416,
     lng: -118.4085,
@@ -159,75 +144,84 @@ export const RoutePanel: React.FC = () => {
   });
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const tileLayerRef = useRef<any>(null);
-  const markersGroupRef = useRef<any>(null);
-  const planeMarkerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const markersGroupRef = useRef<L.LayerGroup | null>(null);
+  const planeMarkerRef = useRef<L.Marker | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const progressRef = useRef<number>(0);
   const lastTelemetryUpdateRef = useRef<number>(0);
 
-  // EKSTRAKSI DAN MERGE SELURUH DATASET BANDARA (DETERMINISTIK)
+  // Bandara tanpa koordinat tetap tersedia di pemilih, tetapi tidak dipetakan.
   const allAirportsMap = useMemo(() => {
-    const map: Record<string, AirportData> = { ...MASTER_AIRPORTS };
-
-    if (filteredRows && filteredRows.length > 0) {
-      filteredRows.forEach((r) => {
-        const origCode = String(r.ORIGIN || r.origin || '').trim().toUpperCase();
-        const origCity = String(r.ORIGIN_CITY_NAME || r.origin_city || '').split(',')[0].trim();
-        const origName = String(r.ORIGIN_NAME || r.origin_name || '').trim();
-
-        if (origCode && origCode.length === 3) {
-          if (!map[origCode]) {
-            const coords = getFallbackCoords(origCode);
-            map[origCode] = {
-              code: origCode,
-              name: origName || `Bandara Komersial ${origCode}`,
-              city: origCity || origCode,
-              lat: coords.lat,
-              lng: coords.lng,
-              baseLoadFactor: 84.5,
-              baseDelayRate: 15.0,
-            };
-          }
-        }
-
-        const destCode = String(r.DEST || r.dest || '').trim().toUpperCase();
-        const destCity = String(r.DEST_CITY_NAME || r.dest_city || '').split(',')[0].trim();
-        const destName = String(r.DEST_NAME || r.dest_name || '').trim();
-
-        if (destCode && destCode.length === 3) {
-          if (!map[destCode]) {
-            const coords = getFallbackCoords(destCode);
-            map[destCode] = {
-              code: destCode,
-              name: destName || `Bandara Komersial ${destCode}`,
-              city: destCity || destCode,
-              lat: coords.lat,
-              lng: coords.lng,
-              baseLoadFactor: 84.5,
-              baseDelayRate: 15.0,
-            };
-          }
-        }
-      });
-    }
-
+    const map: Record<string, AirportData> = {};
+    const enrich = (code: string, cityName: string) => {
+      if (!code) return;
+      const knownAirport = MASTER_AIRPORTS[code];
+      const coordinate = airportCoords[code];
+      const hasValidCoordinates = coordinate && Number.isFinite(coordinate.lat) && Number.isFinite(coordinate.lng);
+      const existing = map[code] ?? knownAirport;
+      map[code] = {
+        code,
+        name: existing?.name ?? `Bandara ${code}`,
+        city: cityName || existing?.city || code,
+        state: existing?.state,
+        lat: hasValidCoordinates ? coordinate.lat : existing?.lat,
+        lng: hasValidCoordinates ? coordinate.lng : existing?.lng,
+      };
+    };
+    filteredRows.forEach((row) => {
+      enrich(String(row.ORIGIN || '').trim().toUpperCase(), String(row.ORIGIN_CITY_NAME || '').trim());
+      enrich(String(row.DEST || '').trim().toUpperCase(), String(row.DEST_CITY_NAME || '').trim());
+    });
+    Object.values(MASTER_AIRPORTS).forEach((airport) => {
+      if (!map[airport.code]) {
+        const coordinate = airportCoords[airport.code];
+        const hasValidCoordinates = coordinate && Number.isFinite(coordinate.lat) && Number.isFinite(coordinate.lng);
+        map[airport.code] = {
+          ...airport,
+          lat: hasValidCoordinates ? coordinate.lat : airport.lat,
+          lng: hasValidCoordinates ? coordinate.lng : airport.lng,
+        };
+      }
+    });
     return map;
+  }, [filteredRows, airportCoords]);
+
+  const routeIndex = useMemo(() => {
+    const originCodes = new Set<string>();
+    const destinationsByOrigin = new Map<string, Set<string>>();
+    filteredRows.forEach((row) => {
+      const originCode = String(row.ORIGIN || '').trim().toUpperCase();
+      const destinationCode = String(row.DEST || '').trim().toUpperCase();
+      if (!originCode || !destinationCode) return;
+      originCodes.add(originCode);
+      const destinations = destinationsByOrigin.get(originCode) ?? new Set<string>();
+      destinations.add(destinationCode);
+      destinationsByOrigin.set(originCode, destinations);
+    });
+    return { originCodes, destinationsByOrigin };
   }, [filteredRows]);
 
-  const availableCities = useMemo(() => {
-    const citySet = new Set<string>();
-    Object.values(allAirportsMap).forEach((ap) => {
-      if (ap.city) citySet.add(ap.city);
-    });
-    return ['Semua Kota', ...Array.from(citySet).sort()];
-  }, [allAirportsMap]);
+  const availableOriginCities = useMemo(
+    () => Array.from(new Set(filteredRows.map((row) => String(row.ORIGIN_CITY_NAME || '').trim()).filter(Boolean))).sort(),
+    [filteredRows],
+  );
+  const availableDestCities = useMemo(
+    () => Array.from(new Set(
+      filteredRows
+        .filter((row) => String(row.ORIGIN || '').trim().toUpperCase() === origin)
+        .map((row) => String(row.DEST_CITY_NAME || '').trim())
+        .filter(Boolean),
+    )).sort(),
+    [filteredRows, origin],
+  );
 
   // SELURUH BANDARA TANPA BATAS (FULL LIST)
   const filteredOriginAirports = useMemo(() => {
     return Object.values(allAirportsMap)
       .filter((ap) => {
+        const availableInData = routeIndex.originCodes.has(ap.code);
         const matchCity = selectedOriginCity === 'Semua Kota' || ap.city === selectedOriginCity;
         const searchLower = originSearch.trim().toLowerCase();
         const matchSearch =
@@ -235,14 +229,15 @@ export const RoutePanel: React.FC = () => {
           ap.name.toLowerCase().includes(searchLower) ||
           ap.city.toLowerCase().includes(searchLower) ||
           ap.code.toLowerCase().includes(searchLower);
-        return matchCity && matchSearch;
+        return availableInData && matchCity && matchSearch;
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allAirportsMap, selectedOriginCity, originSearch]);
+  }, [allAirportsMap, routeIndex, selectedOriginCity, originSearch]);
 
   const filteredDestAirports = useMemo(() => {
     return Object.values(allAirportsMap)
       .filter((ap) => {
+        const connectedFromOrigin = routeIndex.destinationsByOrigin.get(origin)?.has(ap.code) ?? false;
         const matchCity = selectedDestCity === 'Semua Kota' || ap.city === selectedDestCity;
         const searchLower = destSearch.trim().toLowerCase();
         const matchSearch =
@@ -250,58 +245,73 @@ export const RoutePanel: React.FC = () => {
           ap.name.toLowerCase().includes(searchLower) ||
           ap.city.toLowerCase().includes(searchLower) ||
           ap.code.toLowerCase().includes(searchLower);
-        return matchCity && matchSearch;
+        return connectedFromOrigin && matchCity && matchSearch;
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allAirportsMap, selectedDestCity, destSearch]);
+  }, [allAirportsMap, routeIndex, origin, selectedDestCity, destSearch]);
 
-  const startAp = allAirportsMap[origin] || MASTER_AIRPORTS.LAX;
-  const endAp = allAirportsMap[destination] || MASTER_AIRPORTS.JFK;
+  const updateRouteSelection = (nextOrigin: string, nextDestination: string) => {
+    const originCity = allAirportsMap[nextOrigin]?.city || nextOrigin;
+    const destinationCity = allAirportsMap[nextDestination]?.city || nextDestination;
+    setRouteSelection(originCity, nextOrigin, destinationCity, nextDestination);
+  };
+
+  const startAp = useMemo(
+    () => allAirportsMap[origin] || { code: origin, name: `Bandara ${origin}`, city: origin },
+    [allAirportsMap, origin],
+  );
+  const endAp = useMemo(
+    () => allAirportsMap[destination] || { code: destination, name: `Bandara ${destination}`, city: destination },
+    [allAirportsMap, destination],
+  );
 
   const routeStats = useMemo(() => {
     const matchingRows = filteredRows.filter((r) => {
-      const origCode = String(r.ORIGIN || r.origin || '').trim().toUpperCase();
-      const destCode = String(r.DEST || r.dest || '').trim().toUpperCase();
-      return (origCode === origin && destCode === destination) || (origCode === origin || destCode === destination);
+      const origCode = String(r.ORIGIN || '').trim().toUpperCase();
+      const destCode = String(r.DEST || '').trim().toUpperCase();
+      return origCode === origin && destCode === destination;
     });
 
     let totalFlights = 0;
     let totalPassengers = 0;
     let totalSeats = 0;
-    let totalDelays = 0;
+    let delayedFlights = 0;
     let delayMinutesSum = 0;
+    let distanceMilesTotal = 0;
+    let distanceFlights = 0;
     const carrierCountMap: Record<string, number> = {};
 
     if (matchingRows.length > 0) {
       matchingRows.forEach((r) => {
-        const flights = Number(r.DEPARTURES_PERFORMED || r.flights || 1);
-        const pax = Number(r.PASSENGERS || r.passengers || flights * 135);
-        const seats = Number(r.SEATS || r.seats || pax * 1.18);
-        const depDelayMin = Number(r.DEP_DELAY || r.dep_delay || r.ARR_DELAY || 0);
-        const carrier = String(r.CARRIER_NAME || r.UNIQUE_CARRIER || r.carrier || 'Delta Air Lines').trim();
+        const flights = Number(r.DEPARTURES_PERFORMED || 0);
+        const pax = Number(r.PASSENGERS || 0);
+        const seats = Number(r.SEATS || 0);
+        const delayed = Number(r.ARR_DELAY_FLIGHTS || 0);
+        const delayMinutes = Number(r.TOTAL_ARR_DELAY_MINUTES || 0);
+        const carrier = r.UNIQUE_CARRIER || 'Unknown';
 
         totalFlights += flights;
         totalPassengers += pax;
         totalSeats += seats;
-        if (depDelayMin > 15) {
-          totalDelays += flights;
-          delayMinutesSum += depDelayMin;
+        delayedFlights += delayed;
+        delayMinutesSum += delayMinutes;
+        const distanceMiles = Number(r.DISTANCE);
+        if (Number.isFinite(distanceMiles) && distanceMiles > 0) {
+          distanceMilesTotal += distanceMiles * flights;
+          distanceFlights += flights;
         }
 
         carrierCountMap[carrier] = (carrierCountMap[carrier] || 0) + flights;
       });
     }
 
-    const rawLoadFactor = totalSeats > 0 ? (totalPassengers / totalSeats) * 100 : (startAp.baseLoadFactor + endAp.baseLoadFactor) / 2;
-    const loadFactorPct = Math.min(Math.max(Number(rawLoadFactor.toFixed(1)), 72.0), 96.5);
-
-    const rawDelayRate = totalFlights > 0 ? (totalDelays / totalFlights) * 100 : (startAp.baseDelayRate + endAp.baseDelayRate) / 2;
-    const delayRatePct = Math.min(Math.max(Number(rawDelayRate.toFixed(1)), 8.2), 32.5);
+    const loadFactorPct = totalSeats > 0 ? Number(((totalPassengers / totalSeats) * 100).toFixed(1)) : 0;
+    const delayRatePct = totalFlights > 0 ? Number(((delayedFlights / totalFlights) * 100).toFixed(1)) : 0;
     const onTimeRatePct = Number((100 - delayRatePct).toFixed(1));
 
-    const avgDelayMinutes = totalDelays > 0 ? Math.round(delayMinutesSum / totalDelays) : Math.round(11 + (delayRatePct * 0.4));
+    const avgDelayMinutes = delayedFlights > 0 ? Math.round(delayMinutesSum / delayedFlights) : 0;
 
-    let topCarrier = 'Delta Air Lines';
+    let topCarrier = '—';
     let maxCarrierCount = 0;
     Object.entries(carrierCountMap).forEach(([cName, count]) => {
       if (count > maxCarrierCount) {
@@ -310,60 +320,58 @@ export const RoutePanel: React.FC = () => {
       }
     });
 
-    const displayFlights = totalFlights > 0 ? totalFlights : Math.round(180 + (startAp.baseLoadFactor * 3.5));
-    const displayPassengers = totalPassengers > 0 ? totalPassengers : Math.round(displayFlights * 142 * (loadFactorPct / 100));
+    const displayFlights = totalFlights;
+    const displayPassengers = totalPassengers;
 
-    let delayStatusText = 'ON-TIME (Rendah Delay)';
-    let delayStatusBadgeClass = 'bg-emerald-500/10 border-emerald-400/40 text-emerald-400';
+    let delayStatusText = matchingRows.length === 0 ? 'TIDAK ADA DATA' : 'DELAY RENDAH';
+    let delayStatusBadgeClass = matchingRows.length === 0
+      ? 'bg-slate-500/10 border-slate-400/40 text-slate-400'
+      : 'bg-emerald-500/10 border-emerald-400/40 text-emerald-400';
     let delayStatusIcon = CheckCircle2;
-    let insightSummary = `Rute menghubungkan ${startAp.name} ke ${endAp.name} memiliki tingkat efisiensi penerbangan tinggi dengan risiko delay minimal.`;
+    let insightSummary = matchingRows.length === 0
+      ? `Tidak ada catatan untuk rute ${origin}–${destination} pada filter aktif. Pilih pasangan yang tersedia di data.`
+      : `Rute ${origin}–${destination} memiliki delay rate ${delayRatePct}% dari ${totalFlights.toLocaleString('id-ID')} keberangkatan. Ini merupakan ringkasan historis agregat, bukan prediksi jadwal berikutnya.`;
 
     if (delayRatePct > 20) {
       delayStatusText = 'POTENSI DELAY TINGGI';
       delayStatusBadgeClass = 'bg-rose-500/10 border-rose-400/40 text-rose-400';
       delayStatusIcon = AlertTriangle;
-      insightSummary = `Lalu lintas penerbangan antara ${startAp.city} dan ${endAp.city} padat. Disarankan memilih jadwal keberangkatan pagi hari.`;
+      insightSummary = `Delay rate rute ${origin}–${destination} berada di atas 20% pada filter aktif. Periksa volume dan periode sebelum membandingkan; dataset tidak memiliki waktu keberangkatan untuk merekomendasikan jam tertentu.`;
     } else if (delayRatePct > 14) {
       delayStatusText = 'DELAY MODERAT';
       delayStatusBadgeClass = 'bg-amber-500/10 border-amber-400/40 text-amber-400';
       delayStatusIcon = AlertTriangle;
-      insightSummary = `Keterlambatan terjadi secara berkala pada jam sibuk. Keterisian pesawat tergolong padat.`;
+      insightSummary = `Delay rate rute ${origin}–${destination} berada pada rentang 14–20% pada filter aktif; bandingkan bersama volume dan load factor, bukan sebagai bukti sebab-akibat.`;
     }
 
     return {
       loadFactorPct,
+      passengerDataNeedsReview: totalFlights > 0 && totalSeats > 0 && totalPassengers === 0,
       delayRatePct,
       onTimeRatePct,
+      hasData: matchingRows.length > 0,
       avgDelayMinutes,
       topCarrier,
       displayFlights,
       displayPassengers,
+      distanceKm: distanceFlights > 0
+        ? Number(((distanceMilesTotal / distanceFlights) * 1.60934).toFixed(0))
+        : null,
       delayStatusText,
       delayStatusBadgeClass,
       delayStatusIcon,
       insightSummary,
     };
-  }, [filteredRows, origin, destination, startAp, endAp]);
+  }, [filteredRows, origin, destination]);
 
-  useEffect(() => {
-    if ((window as any).L) {
-      setLeafletLoaded(true);
-      return;
-    }
-
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(cssLink);
-
-    const jsScript = document.createElement('script');
-    jsScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    jsScript.async = true;
-    jsScript.onload = () => setLeafletLoaded(true);
-    document.head.appendChild(jsScript);
-  }, []);
+  const hasMapCoordinates =
+    Number.isFinite(startAp.lat) && Number.isFinite(startAp.lng) &&
+    Number.isFinite(endAp.lat) && Number.isFinite(endAp.lng);
 
   const flightPathPoints = useMemo(() => {
+    if (!hasMapCoordinates || startAp.lat == null || startAp.lng == null || endAp.lat == null || endAp.lng == null) {
+      return [];
+    }
     const pts: [number, number][] = [];
     const numPoints = 150;
     const lat1 = startAp.lat;
@@ -387,7 +395,7 @@ export const RoutePanel: React.FC = () => {
       pts.push([lat, lng]);
     }
     return pts;
-  }, [startAp, endAp]);
+  }, [hasMapCoordinates, startAp, endAp]);
 
   const calculateBearing = (p1: [number, number], p2: [number, number]) => {
     const lat1 = (p1[0] * Math.PI) / 180;
@@ -401,9 +409,6 @@ export const RoutePanel: React.FC = () => {
   };
 
   const createAirplaneSVGIcon = (angle: number) => {
-    if (!(window as any).L) return null;
-    const L = (window as any).L;
-
     return L.divIcon({
       className: 'custom-airplane-marker-wrapper',
       html: `
@@ -427,8 +432,7 @@ export const RoutePanel: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!leafletLoaded || !mapContainerRef.current) return;
-    const L = (window as any).L;
+    if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
@@ -438,11 +442,6 @@ export const RoutePanel: React.FC = () => {
       });
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-      tileLayerRef.current = L.tileLayer(TILE_URLS[mapType].url, {
-        attribution: TILE_URLS[mapType].attribution,
-        maxZoom: 18,
-      }).addTo(map);
 
       markersGroupRef.current = L.layerGroup().addTo(map);
       mapInstanceRef.current = map;
@@ -454,11 +453,10 @@ export const RoutePanel: React.FC = () => {
         mapInstanceRef.current = null;
       }
     };
-  }, [leafletLoaded]);
+  }, []);
 
   useEffect(() => {
-    if (!leafletLoaded || !mapInstanceRef.current) return;
-    const L = (window as any).L;
+    if (!mapInstanceRef.current) return;
 
     if (tileLayerRef.current) {
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
@@ -468,14 +466,16 @@ export const RoutePanel: React.FC = () => {
       attribution: TILE_URLS[mapType].attribution,
       maxZoom: 18,
     }).addTo(mapInstanceRef.current);
-  }, [mapType, leafletLoaded]);
+  }, [mapType]);
 
   // HANYA RENDER 2 MARKER BANDARA (ASAL & TUJUAN)
   useEffect(() => {
-    if (!leafletLoaded || !mapInstanceRef.current || !markersGroupRef.current) return;
-    const L = (window as any).L;
+    if (!mapInstanceRef.current || !markersGroupRef.current) return;
     const group = markersGroupRef.current;
     group.clearLayers();
+    planeMarkerRef.current = null;
+    progressRef.current = 0;
+    if (flightPathPoints.length < 2) return;
 
     const polyline = L.polyline(flightPathPoints, {
       color: '#06b6d4',
@@ -487,6 +487,7 @@ export const RoutePanel: React.FC = () => {
     mapInstanceRef.current.fitBounds(polyline.getBounds(), { padding: [60, 60] });
 
     [startAp, endAp].forEach((ap) => {
+      if (ap.lat == null || ap.lng == null) return;
       const isStart = ap.code === startAp.code;
       const markerColor = isStart ? '#10b981' : '#f43f5e';
 
@@ -513,11 +514,11 @@ export const RoutePanel: React.FC = () => {
 
     planeMarkerRef.current = planeMarker;
     progressRef.current = 0;
-  }, [origin, destination, flightPathPoints, leafletLoaded]);
+  }, [flightPathPoints, startAp, endAp]);
 
   // ANIMASI MULUS DENGAN THROTTLED STATE TELEMETRI
   useEffect(() => {
-    if (!isPlaying || !leafletLoaded || !planeMarkerRef.current) return;
+    if (!isPlaying || !planeMarkerRef.current || flightPathPoints.length < 2) return;
 
     let lastTime: number | null = null;
     const baseDuration = 6.0;
@@ -550,28 +551,27 @@ export const RoutePanel: React.FC = () => {
           if (now - lastTelemetryUpdateRef.current > 150) {
             lastTelemetryUpdateRef.current = now;
             const pct = progressRef.current;
-            let alt = 0;
-            let phase = 'Takeoff';
-
-            if (pct < 0.15) {
-              alt = Math.round((pct / 0.15) * 36000);
-              phase = 'Climb / Takeoff';
-            } else if (pct > 0.85) {
-              alt = Math.round(((1 - pct) / 0.15) * 36000);
-              phase = 'Descent / Landing';
-            } else {
-              alt = 36000 + Math.round(Math.sin(pct * 20) * 400);
-              phase = 'Cruising Alt (Jelajah)';
-            }
+            const altitudeFt =
+              pct < 0.15
+                ? Math.round((pct / 0.15) * 36000)
+                : pct > 0.85
+                  ? Math.round(((1 - pct) / 0.15) * 36000)
+                  : 36000 + Math.round(Math.sin(pct * 20) * 400);
+            const flightPhase =
+              pct < 0.15
+                ? 'Climb / Takeoff'
+                : pct > 0.85
+                  ? 'Descent / Landing'
+                  : 'Cruising Alt (Jelajah)';
 
             setTelemetry({
               lat: Number(currentLat.toFixed(4)),
               lng: Number(currentLng.toFixed(4)),
-              altitudeFt: alt,
+              altitudeFt,
               speedKmh: Math.round(820 + Math.sin(pct * 10) * 30),
               bearingDeg: Math.round(bearing),
               progressPct: Math.round(pct * 100),
-              flightPhase: phase,
+              flightPhase,
             });
           }
         }
@@ -585,22 +585,14 @@ export const RoutePanel: React.FC = () => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isPlaying, flightPathPoints, leafletLoaded, simSpeed]);
+  }, [isPlaying, flightPathPoints, simSpeed]);
 
   const handleResetMapFocus = () => {
-    if (mapInstanceRef.current && markersGroupRef.current) {
-      const L = (window as any).L;
+    if (mapInstanceRef.current && markersGroupRef.current && flightPathPoints.length > 1) {
       const polyline = L.polyline(flightPathPoints);
       mapInstanceRef.current.fitBounds(polyline.getBounds(), { padding: [60, 60] });
     }
   };
-
-  const distKm = Math.round(
-    Math.sqrt(
-      Math.pow((endAp.lat - startAp.lat) * 111, 2) +
-        Math.pow((endAp.lng - startAp.lng) * 111 * Math.cos((startAp.lat * Math.PI) / 180), 2)
-    )
-  );
 
   const StatusIconComponent = routeStats.delayStatusIcon;
 
@@ -619,13 +611,14 @@ export const RoutePanel: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                const tempCity = selectedOriginCity;
-                setSelectedOriginCity(selectedDestCity);
-                setSelectedDestCity(tempCity);
-
-                const tempOrig = origin;
-                setOrigin(destination);
-                setDestination(tempOrig);
+                const reverseDestinations = routeIndex.destinationsByOrigin.get(destination);
+                const nextDestination = reverseDestinations?.has(origin)
+                  ? origin
+                  : Array.from(reverseDestinations ?? [])[0];
+                if (!nextDestination) return;
+                const nextOriginCity = allAirportsMap[destination]?.city || destination;
+                const nextDestinationCity = allAirportsMap[nextDestination]?.city || nextDestination;
+                setRouteSelection(nextOriginCity, destination, nextDestinationCity, nextDestination);
               }}
               className="px-3 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-xs font-mono font-bold flex items-center gap-2 hover:bg-cyan-500/30 transition cursor-pointer"
             >
@@ -651,10 +644,28 @@ export const RoutePanel: React.FC = () => {
               <span className="text-[10px] font-mono text-slate-400 uppercase">Kota Asal:</span>
               <select
                 value={selectedOriginCity}
-                onChange={(e) => setSelectedOriginCity(e.target.value)}
+                onChange={(e) => {
+                  const city = e.target.value;
+                  const candidateOrigins = filteredRows
+                    .filter((row) => String(row.ORIGIN_CITY_NAME || '').trim() === city)
+                    .map((row) => String(row.ORIGIN || '').trim().toUpperCase())
+                    .filter(Boolean);
+                  const uniqueOrigins = Array.from(new Set(candidateOrigins)).sort();
+                  const nextOrigin = uniqueOrigins.includes(origin) ? origin : uniqueOrigins[0];
+                  if (!nextOrigin) return;
+                  const connectedRows = filteredRows.filter(
+                    (row) => String(row.ORIGIN || '').trim().toUpperCase() === nextOrigin,
+                  );
+                  const nextDestinationRow = connectedRows.find(
+                    (row) => String(row.DEST || '').trim().toUpperCase() === destination,
+                  ) ?? connectedRows[0];
+                  if (!nextDestinationRow) return;
+                  const nextDestination = String(nextDestinationRow.DEST || '').trim().toUpperCase();
+                  updateRouteSelection(nextOrigin, nextDestination);
+                }}
                 className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer w-full"
               >
-                {availableCities.map((city) => (
+                {availableOriginCities.map((city) => (
                   <option key={`orig-city-${city}`} value={city} className="bg-slate-900 text-white">
                     {city}
                   </option>
@@ -678,7 +689,9 @@ export const RoutePanel: React.FC = () => {
               <select
                 value={origin}
                 onChange={(e) => {
-                  if (e.target.value !== destination) setOrigin(e.target.value);
+                  if (e.target.value !== destination) {
+                    updateRouteSelection(e.target.value, destination);
+                  }
                 }}
                 className="w-full bg-slate-900 text-cyan-300 font-sans font-medium text-xs p-3 rounded-xl border border-cyan-500/40 focus:outline-none focus:border-cyan-400 cursor-pointer"
               >
@@ -707,10 +720,23 @@ export const RoutePanel: React.FC = () => {
               <span className="text-[10px] font-mono text-slate-400 uppercase">Kota Tujuan:</span>
               <select
                 value={selectedDestCity}
-                onChange={(e) => setSelectedDestCity(e.target.value)}
+                onChange={(e) => {
+                  const city = e.target.value;
+                  const connectedRows = filteredRows.filter(
+                    (row) =>
+                      String(row.ORIGIN || '').trim().toUpperCase() === origin &&
+                      String(row.DEST_CITY_NAME || '').trim() === city,
+                  );
+                  const nextRow = connectedRows.find(
+                    (row) => String(row.DEST || '').trim().toUpperCase() === destination,
+                  ) ?? connectedRows[0];
+                  if (!nextRow) return;
+                  const nextDestination = String(nextRow.DEST || '').trim().toUpperCase();
+                  updateRouteSelection(origin, nextDestination);
+                }}
                 className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer w-full"
               >
-                {availableCities.map((city) => (
+                {availableDestCities.map((city) => (
                   <option key={`dest-city-${city}`} value={city} className="bg-slate-900 text-white">
                     {city}
                   </option>
@@ -734,7 +760,9 @@ export const RoutePanel: React.FC = () => {
               <select
                 value={destination}
                 onChange={(e) => {
-                  if (e.target.value !== origin) setDestination(e.target.value);
+                  if (e.target.value !== origin) {
+                    updateRouteSelection(origin, e.target.value);
+                  }
                 }}
                 className="w-full bg-slate-900 text-cyan-300 font-sans font-medium text-xs p-3 rounded-xl border border-cyan-500/40 focus:outline-none focus:border-cyan-400 cursor-pointer"
               >
@@ -844,7 +872,7 @@ export const RoutePanel: React.FC = () => {
         <div className="lg:col-span-8 p-6 rounded-3xl cockpit-card-normal space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-xs font-bold text-slate-100 font-mono uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-cyan-400" /> Live Radar Navigation Flight Path ({Object.keys(allAirportsMap).length} Bandara Terdaftar)
+              <Layers className="w-4 h-4 text-cyan-400" /> Visualisasi Koridor & Simulasi Rute
             </h3>
 
             <div className="flex items-center gap-2">
@@ -859,15 +887,22 @@ export const RoutePanel: React.FC = () => {
                 {TILE_URLS[mapType].name}
               </span>
             </div>
+            <p className="text-[10px] leading-relaxed text-slate-400">
+              Garis dan pesawat bergerak adalah simulasi visual rute terpilih, bukan pelacakan penerbangan langsung.
+              Jarak memakai jarak segmen pada dataset (rata-rata berbobot keberangkatan) dan dikonversi dari mil ke kilometer.
+            </p>
           </div>
 
           <div className="relative w-full h-[380px] rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
-            {!leafletLoaded && (
-              <div className="absolute inset-0 bg-slate-950 flex items-center justify-center text-cyan-400 font-mono text-xs">
-                Mengunggah Sistem Navigasi Peta...
+            <div ref={mapContainerRef} className="w-full h-full z-0" />
+            {!hasMapCoordinates && (
+              <div className="absolute inset-0 z-[500] flex items-center justify-center bg-slate-950/75 p-6 text-center">
+                <p className="max-w-md text-xs leading-relaxed text-amber-200">
+                  Koordinat bandara {startAp.code} atau {endAp.code} tidak tersedia. Rute tetap dapat dianalisis
+                  dari data, tetapi tidak ditampilkan dengan posisi perkiraan di peta.
+                </p>
               </div>
             )}
-            <div ref={mapContainerRef} className="w-full h-full z-0" />
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
@@ -875,7 +910,7 @@ export const RoutePanel: React.FC = () => {
               <Gauge className="w-5 h-5 text-cyan-400" />
               <div>
                 <span className="text-[10px] text-slate-400 uppercase block">Ketinggian</span>
-                <span className="font-bold text-white">{telemetry.altitudeFt.toLocaleString('id-ID')} ft</span>
+                <span className="font-bold text-white">{hasMapCoordinates ? `${telemetry.altitudeFt.toLocaleString('id-ID')} ft` : '—'}</span>
               </div>
             </div>
 
@@ -883,7 +918,7 @@ export const RoutePanel: React.FC = () => {
               <Zap className="w-5 h-5 text-emerald-400" />
               <div>
                 <span className="text-[10px] text-slate-400 uppercase block">Kecepatan Terbang</span>
-                <span className="font-bold text-emerald-400">{telemetry.speedKmh} km/h</span>
+                <span className="font-bold text-emerald-400">{hasMapCoordinates ? `${telemetry.speedKmh} km/h` : '—'}</span>
               </div>
             </div>
 
@@ -891,15 +926,17 @@ export const RoutePanel: React.FC = () => {
               <Navigation className="w-5 h-5 text-violet-400" />
               <div>
                 <span className="text-[10px] text-slate-400 uppercase block">Sudut Arah (Heading)</span>
-                <span className="font-bold text-violet-300">{telemetry.bearingDeg}° DEG</span>
+                <span className="font-bold text-violet-300">{hasMapCoordinates ? `${telemetry.bearingDeg}° DEG` : '—'}</span>
               </div>
             </div>
 
             <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-xs flex items-center gap-3">
               <Clock className="w-5 h-5 text-amber-400" />
               <div>
-                <span className="text-[10px] text-slate-400 uppercase block">Progres Rute</span>
-                <span className="font-bold text-amber-400">{telemetry.progressPct}% ({telemetry.flightPhase})</span>
+                <span className="text-[10px] text-slate-400 uppercase block">Progres Simulasi</span>
+                <span className="font-bold text-amber-400">
+                  {hasMapCoordinates ? `${telemetry.progressPct}% (${telemetry.flightPhase})` : 'Koordinat tidak tersedia'}
+                </span>
               </div>
             </div>
           </div>
@@ -921,13 +958,13 @@ export const RoutePanel: React.FC = () => {
             <div className="space-y-1 font-mono">
               <div className="flex justify-between text-[10px] text-slate-400">
                 <span>{startAp.code}</span>
-                <span className="text-cyan-400 font-bold">{telemetry.progressPct}%</span>
+                <span className="text-cyan-400 font-bold">{hasMapCoordinates ? `${telemetry.progressPct}%` : '—'}</span>
                 <span>{endAp.code}</span>
               </div>
               <div className="w-full h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-rose-400 transition-all duration-300"
-                  style={{ width: `${telemetry.progressPct}%` }}
+                  style={{ width: hasMapCoordinates ? `${telemetry.progressPct}%` : '0%' }}
                 />
               </div>
             </div>
@@ -938,12 +975,16 @@ export const RoutePanel: React.FC = () => {
                   <Users className="w-3 h-3 text-cyan-400" /> Load Factor
                 </span>
                 <div className="text-lg font-bold text-cyan-300">
-                  {routeStats.loadFactorPct}%
+                  {routeStats.passengerDataNeedsReview ? 'Perlu verifikasi' : `${routeStats.loadFactorPct}%`}
                 </div>
                 <div className="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden mt-1">
                   <div className="h-full bg-cyan-400" style={{ width: `${routeStats.loadFactorPct}%` }} />
                 </div>
-                <span className="text-[9px] text-slate-300 block pt-0.5">Keterisian Penumpang</span>
+                <span className="text-[9px] text-slate-300 block pt-0.5">
+                  {routeStats.passengerDataNeedsReview
+                    ? 'Jumlah penumpang tercatat 0 sementara kursi tersedia'
+                    : 'Keterisian Penumpang'}
+                </span>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
@@ -979,13 +1020,20 @@ export const RoutePanel: React.FC = () => {
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex justify-between items-center">
-                <span className="text-slate-400">Estimasi Penumpang/Bln:</span>
+                <span className="text-slate-400">Total Keberangkatan:</span>
+                <span className="font-bold text-white">{routeStats.displayFlights.toLocaleString('id-ID')}</span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex justify-between items-center">
+                <span className="text-slate-400">Penumpang Tercatat:</span>
                 <span className="font-bold text-white">{routeStats.displayPassengers.toLocaleString('id-ID')} pax</span>
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex justify-between items-center">
                 <span className="text-slate-400">Jarak Rute:</span>
-                <span className="font-bold text-white">{distKm.toLocaleString('id-ID')} km</span>
+                <span className="font-bold text-white">
+                  {routeStats.distanceKm == null ? 'Tidak tersedia' : `${routeStats.distanceKm.toLocaleString('id-ID')} km`}
+                </span>
               </div>
             </div>
 
@@ -995,6 +1043,17 @@ export const RoutePanel: React.FC = () => {
               </strong>
               {routeStats.insightSummary}
             </div>
+            {routeStats.passengerDataNeedsReview && (
+              <div className="flex gap-2 rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                <p>
+                  Dataset mencatat {routeStats.displayFlights.toLocaleString('id-ID')} keberangkatan dan
+                  memiliki kursi tersedia, tetapi nilai penumpang rute ini adalah 0. Angka keberangkatan dan
+                  penumpang berasal dari kolom agregat yang berbeda; periksa sumber/kelengkapan data sebelum
+                  menafsirkan angka 0 sebagai pesawat benar-benar kosong.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

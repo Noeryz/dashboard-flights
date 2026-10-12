@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
+import { InsightCard } from './InsightCard';
 import {
   Activity,
   Users,
@@ -35,26 +36,17 @@ const MONTH_NAMES_FULL = [
 ];
 
 // Komponen Titik & Pesawat Terbang di Luar OverviewPanel (Menjamin Tipe Komponen Lebih Stabil & Bebas Error)
-const CustomPlaneDot: React.FC<any> = (props) => {
-  const { cx, cy, index, activeMonth, monthPointsRef } = props;
+interface CustomPlaneDotProps {
+  cx?: number;
+  cy?: number;
+  index?: number;
+  activeMonth: number | null;
+}
+
+const CustomPlaneDot: React.FC<CustomPlaneDotProps> = ({ cx, cy, index = -1, activeMonth }) => {
   if (cx == null || cy == null) return null;
 
-  if (monthPointsRef && monthPointsRef.current) {
-    monthPointsRef.current[index] = { cx, cy };
-  }
-
   const isCurrentActive = activeMonth !== null && index === activeMonth - 1;
-
-  let angle = 0;
-  if (monthPointsRef && monthPointsRef.current) {
-    const p1 = monthPointsRef.current[index];
-    const p2 = monthPointsRef.current[index + 1];
-    if (p1 && p2) {
-      const dx = p2.cx - p1.cx;
-      const dy = p2.cy - p1.cy;
-      angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-    }
-  }
 
   return (
     <g key={`dot-${index}`}>
@@ -79,7 +71,7 @@ const CustomPlaneDot: React.FC<any> = (props) => {
           <circle r="4" fill="#06b6d4" stroke="#ffffff" strokeWidth="1" />
 
           {/* Ikon Pesawat Terorientasi Menanjak/Menurun Sesuai Garis */}
-          <g transform={`rotate(${angle})`}>
+          <g>
             <g transform="translate(-12, -12)">
               <path
                 d="M21 12L3 4l3 8-3 8 18-8z"
@@ -110,17 +102,9 @@ export const OverviewPanel: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [zoomRange, setZoomRange] = useState<[number, number]>([0, 11]);
 
-  // Ref Penyimpan Koordinat Titik Kurva
-  const monthPointsRef = useRef<Record<number, { cx: number; cy: number }>>({});
-
-  // Reset titik jika zoom/filter berubah
-  useEffect(() => {
-    monthPointsRef.current = {};
-  }, [zoomRange, filteredRows]);
-
   // Timer Simulasi Pergerakan Pesawat Meluncur Antarbulan
   useEffect(() => {
-    let interval: any = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (isPlaying) {
       interval = setInterval(() => {
         setActiveMonth((prev) => {
@@ -183,6 +167,15 @@ export const OverviewPanel: React.FC = () => {
   const visibleMonthlyTrend = useMemo(() => {
     return fullMonthlyTrend.slice(zoomRange[0], zoomRange[1] + 1);
   }, [fullMonthlyTrend, zoomRange]);
+  const peakMonth = visibleMonthlyTrend.reduce(
+    (peak, month) => month.volume > peak.volume ? month : peak,
+    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: 0, monthNum: 0 },
+  );
+  const quietMonth = visibleMonthlyTrend.reduce(
+    (quiet, month) => month.volume < quiet.volume ? month : quiet,
+    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: 0, monthNum: 0 },
+  );
+  const busiestCarrier = dynamicTopCarriers[0];
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.5, 2.5));
@@ -288,8 +281,14 @@ export const OverviewPanel: React.FC = () => {
           <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 space-y-2">
             <p className="font-bold text-cyan-300">📌 Catatan Tren Musiman:</p>
             <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-300">
-              <li>Puncak kepadatan arus penumpang terjadi pada bulan <strong>Juni sampai Agustus</strong>.</li>
-              <li>Tingkat ketepatan waktu penerbangan rata-rata nasional berada di posisi <strong>{kpis.otpRate}%</strong>.</li>
+              <li>
+                Volume keberangkatan terbesar pada filter aktif terjadi di <strong>{peakMonth.monthFull}</strong>
+                {' '}({formatNum(peakMonth.volume)} keberangkatan), bukan otomatis bukti musim liburan.
+              </li>
+              <li>
+                OTP agregat pada filter aktif: <strong>{kpis.otpRate}%</strong>; indikator ini dihitung sebagai
+                100% dikurangi delay rate agregat yang tersedia.
+              </li>
             </ul>
           </div>
         </div>
@@ -386,7 +385,7 @@ export const OverviewPanel: React.FC = () => {
                       borderRadius: '12px',
                       fontSize: '12px',
                     }}
-                    formatter={(val: any) => [Number(val).toLocaleString('id-ID'), 'Volume Penerbangan']}
+                    formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Volume Penerbangan']}
                     labelFormatter={(label) => `Bulan: ${label}`}
                   />
                   <Area
@@ -396,11 +395,18 @@ export const OverviewPanel: React.FC = () => {
                     fill="#06b6d4"
                     fillOpacity={0.2}
                     strokeWidth={2.5}
-                    dot={<CustomPlaneDot activeMonth={activeMonth} monthPointsRef={monthPointsRef} />}
+                    dot={<CustomPlaneDot activeMonth={activeMonth} />}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+            <InsightCard title="Insight tren bulanan">
+              Volume tertinggi dalam rentang yang terlihat terjadi pada {peakMonth.monthFull} (
+              {formatNum(peakMonth.volume)} keberangkatan), sedangkan yang terendah pada {quietMonth.monthFull} (
+              {formatNum(quietMonth.volume)}). Rata-rata keterlambatan pada bulan puncak itu adalah{' '}
+              {peakMonth.avgDelay.toFixed(1)} menit per penerbangan terlambat. Grafik ini memakai jumlah
+              keberangkatan, bukan jumlah penumpang; pola bulanan saja tidak menjelaskan penyebab perubahan.
+            </InsightCard>
           </div>
 
           {/* MASKAPAI TERATAS */}
@@ -416,7 +422,7 @@ export const OverviewPanel: React.FC = () => {
                   <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
-                    formatter={(val: any) => [Number(val).toLocaleString('id-ID'), 'Jumlah Penerbangan']}
+                    formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Jumlah Penerbangan']}
                   />
                   <Bar dataKey="flights" fill="#06b6d4" radius={[6, 6, 0, 0]}>
                     {dynamicTopCarriers.map((_, idx) => (
@@ -426,6 +432,13 @@ export const OverviewPanel: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            <InsightCard title="Insight maskapai teratas">
+              {busiestCarrier
+                ? `${busiestCarrier.carrier} memiliki volume terbesar di antara 8 maskapai teratas yang ditampilkan (${formatNum(busiestCarrier.flights)} keberangkatan).`
+                : 'Belum ada data maskapai pada filter ini.'}{' '}
+              Grafik ini hanya menampilkan delapan kode teratas agar mudah dibaca; panel Performa Maskapai
+              memuat ringkasan semua maskapai yang tersedia. Volume besar bukan berarti tingkat delay lebih buruk.
+            </InsightCard>
           </div>
         </div>
       </div>

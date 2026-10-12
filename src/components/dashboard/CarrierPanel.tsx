@@ -2,7 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { CARRIER_NAMES, FAA_ECONOMIC_CONSTANTS } from '../../utils/referenceData';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
-import { Building2, Search, Play, Pause, ZoomIn, ZoomOut, Maximize2, RotateCcw } from 'lucide-react';
+import { InsightCard } from './InsightCard';
+import { Building2, Search, Play, Pause, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 
 export const CarrierPanel: React.FC = () => {
@@ -16,7 +17,7 @@ export const CarrierPanel: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isPlaying) {
       interval = setInterval(() => {
         setSimulatedMonth((prev) => {
@@ -109,6 +110,14 @@ export const CarrierPanel: React.FC = () => {
     }
     return filtered;
   }, [carrierMetrics, searchTerm, zoomLevel]);
+  const highestDelayCarrier = carrierMetrics.reduce<(typeof carrierMetrics)[number] | null>(
+    (highest, carrier) => !highest || carrier.delayRate > highest.delayRate ? carrier : highest,
+    null,
+  );
+  const lowestDelayCarrier = carrierMetrics.reduce<(typeof carrierMetrics)[number] | null>(
+    (lowest, carrier) => !lowest || carrier.delayRate < lowest.delayRate ? carrier : lowest,
+    null,
+  );
 
   return (
     <div className="space-y-6">
@@ -218,6 +227,14 @@ export const CarrierPanel: React.FC = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <InsightCard title="Insight perbandingan maskapai">
+          {highestDelayCarrier && lowestDelayCarrier
+            ? `${highestDelayCarrier.code} mencatat delay rate tertinggi (${highestDelayCarrier.delayRate}%), sementara ${lowestDelayCarrier.code} terendah (${lowestDelayCarrier.delayRate}%) pada cakupan filter ini.`
+            : 'Belum ada cukup data maskapai pada cakupan filter ini.'}{' '}
+          Delay rate adalah jumlah penerbangan terlambat dibagi keberangkatan, sedangkan rata-rata menit
+          hanya dihitung di antara penerbangan yang terlambat. Baca kedua metrik bersama volume dan load factor;
+          maskapai dengan sedikit penerbangan lebih mudah berubah peringkatnya.
+        </InsightCard>
       </div>
 
       {/* TABEL DETAIL MASKAPAI */}
@@ -267,6 +284,11 @@ export const CarrierPanel: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <InsightCard title="Cara membaca tabel">
+          Total penerbangan adalah agregasi seluruh baris dataset untuk setiap kode maskapai. Load factor =
+          penumpang ÷ kursi; perkiraan kerugian (jika mode analis aktif) mengalikan menit delay dengan asumsi
+          biaya FAA yang ditetapkan aplikasi, sehingga merupakan estimasi model biaya, bukan kerugian akuntansi aktual.
+        </InsightCard>
       </div>
     </div>
   );

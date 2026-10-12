@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
-import { Building2, MapPin, Globe, Play, Pause, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Building2, MapPin, Globe, Play, Pause, ZoomIn, ZoomOut, RotateCcw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import { InsightCard } from './InsightCard';
 
 export const AirportPanel: React.FC = () => {
   const { getFilteredRows } = useFlightStore();
@@ -10,10 +11,13 @@ export const AirportPanel: React.FC = () => {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [simulatedMonth, setSimulatedMonth] = useState<number | null>(null);
-  const [zoomLimit, setZoomLimit] = useState<number>(8);
+  const [zoomLimit, setZoomLimit] = useState<number>(12);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isPlaying) {
       interval = setInterval(() => {
         setSimulatedMonth((prev) => {
@@ -26,29 +30,46 @@ export const AirportPanel: React.FC = () => {
   }, [isPlaying]);
 
   const airportStats = useMemo(() => {
-    const originMap: Record<string, { flights: number; passengers: number }> = {};
+    const originMap: Record<string, { flights: number; passengers: number; seats: number; delayed: number; delayMinutes: number }> = {};
 
     filteredRows.forEach((r) => {
       if (simulatedMonth !== null && Number(r.MONTH) !== simulatedMonth) return;
 
-      const orig = String(r.ORIGIN || 'ATL').trim().toUpperCase();
+      const orig = String(r.ORIGIN || '').trim().toUpperCase();
+      if (!orig) return;
       const flights = Number(r.DEPARTURES_PERFORMED || 0);
       const pax = Number(r.PASSENGERS || 0);
 
       if (!originMap[orig]) {
-        originMap[orig] = { flights: 0, passengers: 0 };
+        originMap[orig] = { flights: 0, passengers: 0, seats: 0, delayed: 0, delayMinutes: 0 };
       }
       originMap[orig].flights += flights;
       originMap[orig].passengers += pax;
+      originMap[orig].seats += Number(r.SEATS || 0);
+      originMap[orig].delayed += Number(r.ARR_DELAY_FLIGHTS || 0);
+      originMap[orig].delayMinutes += Number(r.TOTAL_ARR_DELAY_MINUTES || 0);
     });
 
     return Object.entries(originMap)
-      .map(([code, data]) => ({ airport: code, flights: data.flights, passengers: data.passengers }))
-      .sort((a, b) => b.flights - a.flights)
-      .slice(0, zoomLimit);
-  }, [filteredRows, simulatedMonth, zoomLimit]);
+      .map(([code, data]) => ({
+        airport: code,
+        flights: data.flights,
+        passengers: data.passengers,
+        seats: data.seats,
+        delayRate: data.flights > 0 ? (data.delayed / data.flights) * 100 : 0,
+        averageDelay: data.delayed > 0 ? data.delayMinutes / data.delayed : 0,
+      }))
+      .sort((a, b) => b.flights - a.flights);
+  }, [filteredRows, simulatedMonth]);
 
-  const topAirport = airportStats[0] || { airport: 'ATL', flights: 0, passengers: 0 };
+  const chartAirports = airportStats.slice(0, zoomLimit);
+  const totalAirportFlights = airportStats.reduce((sum, airport) => sum + airport.flights, 0);
+  const topAirport = airportStats[0];
+  const searchedAirports = airportStats.filter((airport) =>
+    airport.airport.toLowerCase().includes(searchTerm.toLowerCase().trim()),
+  );
+  const totalPages = Math.max(1, Math.ceil(searchedAirports.length / itemsPerPage));
+  const pageAirports = searchedAirports.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-6">
@@ -60,7 +81,9 @@ export const AirportPanel: React.FC = () => {
           <div>
             <h2 className="text-lg font-bold text-white uppercase font-mono tracking-wider">Aktivitas Volume Bandara Utama</h2>
             <p className="text-xs text-slate-300">
-              Pusat Hub Tersibuk: <strong className="text-cyan-400 font-mono">{topAirport.airport}</strong> ({topAirport.flights.toLocaleString('id-ID')} Penerbangan)
+              {topAirport
+                ? <>Pusat Hub Tersibuk: <strong className="text-cyan-400 font-mono">{topAirport.airport}</strong> ({topAirport.flights.toLocaleString('id-ID')} keberangkatan)</>
+                : 'Data bandara tidak tersedia untuk filter ini.'}
             </p>
           </div>
         </div>
@@ -102,12 +125,19 @@ export const AirportPanel: React.FC = () => {
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
+              <button
+                onClick={() => setZoomLimit(25)}
+                className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1 text-[10px] font-mono text-slate-300 hover:text-cyan-400"
+                title="Tampilkan 25 bandara teratas"
+              >
+                Top 25
+              </button>
 
               <button
                 onClick={() => {
                   setIsPlaying(false);
                   setSimulatedMonth(null);
-                  setZoomLimit(8);
+                  setZoomLimit(12);
                 }}
                 className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 cursor-pointer"
                 title="Reset Axis Utama"
@@ -119,35 +149,72 @@ export const AirportPanel: React.FC = () => {
 
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={airportStats}>
+              <BarChart data={chartAirports}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis dataKey="airport" stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
-                  formatter={(val: any) => [Number(val).toLocaleString('id-ID'), 'Volume Penerbangan']}
+                  formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Volume Penerbangan']}
                 />
                 <Bar dataKey="flights" fill="#06b6d4" radius={[6, 6, 0, 0]}>
-                  {airportStats.map((_, index) => (
+                  {chartAirports.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#06b6d4'} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <InsightCard title="Insight volume dan performa bandara">
+            {topAirport
+              ? `${topAirport.airport} adalah asal dengan volume tertinggi (${topAirport.flights.toLocaleString('id-ID')} keberangkatan; ${(totalAirportFlights > 0 ? (topAirport.flights / totalAirportFlights) * 100 : 0).toFixed(1)}% dari total volume asal pada filter ini). Delay rate-nya ${topAirport.delayRate.toFixed(1)}% dan rata-rata delay pada penerbangan terlambat ${topAirport.averageDelay.toFixed(1)} menit.`
+              : 'Belum ada baris bandara pada filter ini.'}{' '}
+            Grafik memperlihatkan {chartAirports.length} dari {airportStats.length} bandara, diurutkan menurut
+            keberangkatan. Gunakan pilihan Top 5/12/25; daftar di samping tetap menyediakan pencarian dan halaman
+            untuk seluruh bandara, jadi angka yang tidak ditampilkan di grafik tidak dibuang dari dataset.
+          </InsightCard>
         </div>
 
         <div className="lg:col-span-4 p-6 rounded-3xl cockpit-card-normal space-y-4">
           <h3 className="text-xs font-bold text-slate-100 font-mono uppercase tracking-wider flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-violet-400" /> Rincian Hub Utama
+            <MapPin className="w-4 h-4 text-violet-400" /> Seluruh Bandara Asal
           </h3>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <input
+              aria-label="Cari bandara asal"
+              value={searchTerm}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Cari kode IATA..."
+              className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-9 pr-3 text-xs text-white"
+            />
+          </div>
           <div className="space-y-2.5 font-mono text-xs">
-            {airportStats.map((item, idx) => (
-              <div key={idx} className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-                <span className="font-bold text-cyan-400">{item.airport}</span>
-                <span className="text-slate-300">{item.flights.toLocaleString('id-ID')} Penerbangan</span>
+            {pageAirports.map((item) => (
+              <div key={item.airport} className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-cyan-400">{item.airport}</span>
+                  <span className="text-slate-300">{item.flights.toLocaleString('id-ID')} keberangkatan</span>
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Delay {item.delayRate.toFixed(1)}% · rata-rata {item.averageDelay.toFixed(1)} mnt saat terlambat · load {item.seats > 0 ? ((item.passengers / item.seats) * 100).toFixed(1) : '0.0'}%
+                </p>
               </div>
             ))}
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-400">
+            <span>{searchedAirports.length.toLocaleString('id-ID')} bandara · halaman {currentPage}/{totalPages}</span>
+            <div className="flex gap-1">
+              <button type="button" aria-label="Halaman sebelumnya" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} className="rounded border border-slate-800 p-1 disabled:opacity-40">
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" aria-label="Halaman berikutnya" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} className="rounded border border-slate-800 p-1 disabled:opacity-40">
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

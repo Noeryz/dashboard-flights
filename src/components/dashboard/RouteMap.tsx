@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useFlightStore } from '../../store/useFlightStore';
 import { US_AIRPORT_NAMES } from '../../utils/referenceData';
-import { Compass, Layers, Map as MapIcon, Globe, Mountain } from 'lucide-react';
+import { Compass, Layers, Map as MapIcon, Globe, Mountain, type LucideIcon } from 'lucide-react';
 
 interface RouteMapProps {
   origin: string;
@@ -12,7 +12,7 @@ interface RouteMapProps {
 
 type MapMode = 'dark' | 'street' | 'satellite' | 'topo';
 
-const TILE_LAYERS: Record<MapMode, { url: string; name: string; icon: any }> = {
+const TILE_LAYERS: Record<MapMode, { url: string; name: string; icon: LucideIcon }> = {
   dark: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     name: 'Dark Mode',
@@ -110,8 +110,8 @@ export const RouteMap: React.FC<RouteMapProps> = ({ origin, destination }) => {
     let destCity = '';
     for (let i = 0; i < rawRows.length; i++) {
       const r = rawRows[i];
-      if (!originCity && r.ORIGIN === origin) originCity = r.origin_city;
-      if (!destCity && r.DEST === destination) destCity = r.dest_city;
+      if (!originCity && r.ORIGIN === origin) originCity = r.ORIGIN_CITY_NAME || '';
+      if (!destCity && r.DEST === destination) destCity = r.DEST_CITY_NAME || '';
       if (originCity && destCity) break;
     }
     return {
