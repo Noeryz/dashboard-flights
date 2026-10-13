@@ -31,11 +31,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onReturnHero }) => {
         aria-label="FlightInsight — kembali ke ringkasan utama"
         className="flex shrink-0 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
       >
-        <div className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-cyan-300">
-          <Plane className="h-5 w-5" />
-        </div>
+        <img
+          src={`${import.meta.env.BASE_URL}logo.png`}
+          alt=""
+          aria-hidden="true"
+          className="h-12 w-12 object-contain"
+        />
         <div>
-          <h1 className="flex items-center gap-1.5 text-base font-semibold text-white">
+          <h1 className="text-base font-semibold text-white">
             Flight<span className="text-cyan-400">Insight</span>
           </h1>
           <p className="text-[10px] text-slate-400">Analisis penerbangan nasional</p>

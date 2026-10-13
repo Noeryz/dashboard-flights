@@ -186,9 +186,13 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onStartTransition }) =
           aria-label="Kembali ke awal halaman"
           className="flex items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
         >
-          <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-2 text-cyan-300">
-            <Plane className="w-5 h-5" />
-          </div>
+          <span aria-hidden="true" className="relative h-10 w-10 shrink-0">
+            <img
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt=""
+              className="absolute left-1/2 top-1/2 h-14 w-14 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain"
+            />
+          </span>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white">
               Flight<span className="text-cyan-300">Insight</span>
