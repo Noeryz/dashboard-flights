@@ -1,10 +1,14 @@
 import React, { useMemo } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
-import { Filter, RotateCcw, Layers } from 'lucide-react';
+import { Filter, RotateCcw, Layers, PanelLeftClose } from 'lucide-react';
 import { getCarrierDisplayName } from '../../utils/referenceData';
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onClose: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { rawRows, filters, setFilter, resetFilters, viewMode, setViewMode, getFilteredRows } = useFlightStore();
   const filteredRows = getFilteredRows();
   const carrierCodes = useMemo(
@@ -13,7 +17,22 @@ export const Sidebar: React.FC = () => {
   );
 
   return (
-    <aside className="w-full shrink-0 space-y-6 border-r border-slate-800/80 bg-slate-950/85 p-6 lg:w-72">
+    <aside id="dashboard-sidebar" className="w-full shrink-0 space-y-6 border-r border-slate-800/80 bg-slate-950/85 p-6 lg:w-72">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-300">Panel samping</span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup sidebar"
+          aria-controls="dashboard-sidebar"
+          aria-expanded={true}
+          title="Tutup sidebar"
+          className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-slate-300 transition-colors hover:border-cyan-400/60 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+        >
+          <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
       <div className="p-4 rounded-2xl space-y-3 cockpit-card-normal">
         <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
           <span className="flex items-center gap-1.5">

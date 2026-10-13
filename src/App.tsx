@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { PanelLeftOpen } from 'lucide-react';
 import { useFlightStore } from './store/useFlightStore';
 import { loadAllFlightData } from './utils/dataLoader';
 import { LandingHero } from './components/cinematic/LandingHero';
@@ -21,6 +22,7 @@ export default function App() {
     status: 'loading',
   });
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const transitionVideoRef = useRef<HTMLVideoElement>(null);
 
   const { setRawRows, setAirportCoords, activeMenu, setActiveMenu, viewMode } = useFlightStore();
@@ -124,17 +126,33 @@ export default function App() {
           <div className="relative z-10 flex flex-col min-h-screen">
             <Navbar onReturnHero={handleReturnHero} />
 
-            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col pb-12 md:flex-row">
-              <Sidebar />
+            <div className={`mx-auto flex w-full flex-1 flex-col pb-12 md:flex-row ${isSidebarOpen ? 'max-w-7xl' : 'max-w-none'}`}>
+              {isSidebarOpen && <Sidebar onClose={() => setIsSidebarOpen(false)} />}
 
               <main className="min-w-0 flex-1 space-y-6 overflow-x-hidden p-6">
                 <div className="flex items-center justify-between rounded-xl border border-slate-800/80 bg-slate-900/85 px-4 py-2 text-xs">
-                  <span className="text-slate-300">
-                    Mode tampilan:{' '}
-                    <strong className={viewMode === 'analyst' ? 'text-violet-400' : 'text-cyan-400'}>
-                      {viewMode === 'analyst' ? 'Analis · data granular' : 'Publik · ringkasan'}
-                    </strong>
-                  </span>
+                  <div className="flex min-w-0 items-center gap-3">
+                    {!isSidebarOpen && (
+                      <button
+                        type="button"
+                        onClick={() => setIsSidebarOpen(true)}
+                        aria-label="Buka kembali sidebar"
+                        aria-controls="dashboard-sidebar"
+                        aria-expanded={false}
+                        title="Buka kembali sidebar"
+                        className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 font-semibold text-cyan-200 transition-colors hover:bg-cyan-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                      >
+                        <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+                        <span className="hidden sm:inline">Buka filter</span>
+                      </button>
+                    )}
+                    <span className="min-w-0 truncate text-slate-300">
+                      Mode tampilan:{' '}
+                      <strong className={viewMode === 'analyst' ? 'text-violet-400' : 'text-cyan-400'}>
+                        {viewMode === 'analyst' ? 'Analis · data granular' : 'Publik · ringkasan'}
+                      </strong>
+                    </span>
+                  </div>
                 </div>
 
                 {dataLoadState.status === 'loading' && (
