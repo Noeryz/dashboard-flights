@@ -215,20 +215,12 @@ export const OverviewPanel: React.FC = () => {
           <HelpCircle className="h-5 w-5 text-cyan-300" />
           <h2 className="font-mono text-sm font-bold uppercase tracking-wide text-white">Rumusan Masalah</h2>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="mt-4">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-200">Fenomena yang dikaji</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-200">Problem Statement</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Bagaimana volume operasi dan keterlambatan terlihat dalam data, serta bagaimana polanya berbeda antarbulan,
-              maskapai, bandara, serta rute?
+              Bagaimana distribusi performa ketepatan waktu (delay) dan volume operasi antar maskapai, bandara, dan periode waktu (bulanan/harian), serta apa faktor dominan penyebab delay tersebut?
             </p>
-          </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-200">Pertanyaan analisis</h3>
-            <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm leading-relaxed text-slate-300">
-              <li>Di mana volume dan keterlambatan paling menonjol?</li>
-              <li>Bagaimana pola keterlambatan berbeda antarbandara dan rute?</li>
-            </ol>
           </div>
         </div>
         <p className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-400">
