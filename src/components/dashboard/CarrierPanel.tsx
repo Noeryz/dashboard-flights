@@ -320,7 +320,7 @@ export const CarrierPanel: React.FC = () => {
                 <tr key={c.code} className="hover:bg-slate-800/40 transition">
                   <td className="py-3 px-3 font-semibold text-white flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[11px]">{c.code}</span>
-                    {CARRIER_NAMES[c.code] ?? 'Nama belum tersedia'}
+                    {CARRIER_NAMES[c.code] && <span>{CARRIER_NAMES[c.code]}</span>}
                   </td>
                   <td className="py-3 px-3 text-slate-300">{c.totalFlights.toLocaleString('id-ID')}</td>
                   <td className="py-3 px-3 font-semibold text-rose-400">{c.delayRate}%</td>
