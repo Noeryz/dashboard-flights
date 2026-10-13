@@ -823,7 +823,7 @@ export const RoutePanel: React.FC = () => {
             onClick={() => setMapType('dark')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'dark'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_#06b6d4]'
+                ? 'bg-cyan-400 text-slate-950'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -836,7 +836,7 @@ export const RoutePanel: React.FC = () => {
             onClick={() => setMapType('satellite')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'satellite'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_#06b6d4]'
+                ? 'bg-cyan-400 text-slate-950'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -849,7 +849,7 @@ export const RoutePanel: React.FC = () => {
             onClick={() => setMapType('streets')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'streets'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_#06b6d4]'
+                ? 'bg-cyan-400 text-slate-950'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -862,7 +862,7 @@ export const RoutePanel: React.FC = () => {
             onClick={() => setMapType('terrain')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'terrain'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_#06b6d4]'
+                ? 'bg-cyan-400 text-slate-950'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -880,7 +880,7 @@ export const RoutePanel: React.FC = () => {
                 onClick={() => setSimSpeed(spd)}
                 className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition cursor-pointer ${
                   simSpeed === spd
-                    ? 'bg-emerald-500 text-slate-950 shadow-[0_0_10px_#10b981]'
+                    ? 'bg-emerald-400 text-slate-950'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >

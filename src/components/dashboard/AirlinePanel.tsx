@@ -123,7 +123,7 @@ export const AirlinePanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-flight-violet/10 border border-flight-violet/30 text-flight-violet">
             <Building2 className="w-6 h-6" />
@@ -177,7 +177,7 @@ export const AirlinePanel: React.FC = () => {
           : 'Data maskapai belum tersedia pada filter ini.'}
       </InsightCard>
 
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
+      <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80">
         <h3 className="text-base font-semibold text-white mb-4">
           Perbandingan Maskapai Berdasarkan {metricToggle === 'rate' ? 'Tingkat Keterlambatan (%)' : 'Durasi Rata-Rata Keterlambatan'}
         </h3>
@@ -207,7 +207,7 @@ export const AirlinePanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
+      <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-white">Matriks Detail Maskapai</h3>
           <div className="relative w-full sm:w-64">

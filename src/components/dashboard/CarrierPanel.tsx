@@ -147,7 +147,7 @@ export const CarrierPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-violet-500/10 border border-violet-500/30 text-violet-400">
             <Building2 className="w-6 h-6" />
@@ -185,7 +185,7 @@ export const CarrierPanel: React.FC = () => {
       </div>
 
       {/* CARD GRAFIK PERFORMA DENGAN TOOLBAR LEBIH LENGKAP */}
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
+      <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div>
             <h3 className="text-base font-semibold text-white">
@@ -287,7 +287,7 @@ export const CarrierPanel: React.FC = () => {
       </div>
 
       {/* TABEL DETAIL MASKAPAI */}
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
+      <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-white">Detail Ringkasan Maskapai</h3>
           <div className="relative w-full sm:w-64">

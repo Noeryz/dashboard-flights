@@ -66,7 +66,7 @@ export const DelayFactorPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-flight-amber/10 border border-flight-amber/30 text-flight-amber">
             <AlertTriangle className="w-6 h-6" />
@@ -100,7 +100,7 @@ export const DelayFactorPanel: React.FC = () => {
       {/* Chart Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pie Chart Proporsi Menit */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md flex flex-col justify-between">
+        <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 flex flex-col justify-between">
           <h3 className="text-base font-semibold text-white mb-2">Proporsi Menit per Kategori Delay (%)</h3>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -130,7 +130,7 @@ export const DelayFactorPanel: React.FC = () => {
         </div>
 
         {/* Bar Chart Total Menit */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md flex flex-col justify-between">
+        <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 flex flex-col justify-between">
           <h3 className="text-base font-semibold text-white mb-2">Total Akumulasi Menit (Juta Mnt)</h3>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -160,7 +160,7 @@ export const DelayFactorPanel: React.FC = () => {
         {factorMetrics.map((f, idx) => {
           const Icon = f.icon;
           return (
-            <div key={idx} className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-2">
+            <div key={idx} className="p-4 rounded-xl bg-slate-900/85 border border-slate-800/80 space-y-2">
               <div className="flex items-center justify-between">
                 <Icon className="w-5 h-5" style={{ color: f.color }} />
                 <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-800" style={{ color: f.color }}>

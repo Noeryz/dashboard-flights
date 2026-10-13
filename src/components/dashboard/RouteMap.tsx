@@ -274,7 +274,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ origin, destination }) => {
   }, [originCoord, destCoord, origin, destination, cityInfo]);
 
   return (
-    <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-md space-y-4">
+    <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800/80 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center gap-2">
           <Compass className="w-5 h-5 text-flight-cyan" />
@@ -289,7 +289,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ origin, destination }) => {
 
       <div className="relative w-full h-[380px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80">
         {/* Switcher Mode Peta */}
-        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-800">
+        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1 bg-slate-900/95 p-1 rounded-xl border border-slate-800">
           {(Object.keys(TILE_LAYERS) as MapMode[]).map((mode) => {
             const Icon = TILE_LAYERS[mode].icon;
             const isActive = mapMode === mode;
@@ -300,7 +300,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ origin, destination }) => {
                 aria-pressed={isActive}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-flight-cyan text-slate-950 font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]'
+                    ? 'bg-flight-cyan text-slate-950 font-semibold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
                 title={TILE_LAYERS[mode].name}
@@ -316,14 +316,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({ origin, destination }) => {
 
         {/* Info Rute Overlay Bawah */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs pointer-events-none z-[1000]">
-          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 backdrop-blur-md max-w-[45%]">
+          <div className="p-2.5 rounded-xl bg-slate-900/95 border border-slate-800 text-slate-200 max-w-[45%]">
             <p className="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-flight-cyan inline-block"></span> ASAL (ORIGIN)
             </p>
             <p className="font-bold text-flight-cyan truncate">{origin} - {cityInfo.originCity}</p>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 text-right backdrop-blur-md max-w-[45%]">
+          <div className="p-2.5 rounded-xl bg-slate-900/95 border border-slate-800 text-slate-200 text-right max-w-[45%]">
             <p className="text-[10px] text-slate-400 uppercase font-semibold flex items-center justify-end gap-1">
               TUJUAN (DESTINATION) <span className="w-2 h-2 rounded-full bg-flight-violet inline-block"></span>
             </p>

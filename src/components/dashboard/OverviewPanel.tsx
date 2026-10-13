@@ -37,58 +37,33 @@ const MONTH_NAMES_FULL = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
+const MONTH_NAMES_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+];
 
-// Komponen Titik & Pesawat Terbang di Luar OverviewPanel (Menjamin Tipe Komponen Lebih Stabil & Bebas Error)
-interface CustomPlaneDotProps {
+interface ActiveMonthDotProps {
   cx?: number;
   cy?: number;
   index?: number;
   activeMonth: number | null;
 }
 
-const CustomPlaneDot: React.FC<CustomPlaneDotProps> = ({ cx, cy, index = -1, activeMonth }) => {
+const ActiveMonthDot: React.FC<ActiveMonthDotProps> = ({ cx, cy, index = -1, activeMonth }) => {
   if (cx == null || cy == null) return null;
 
   const isCurrentActive = activeMonth !== null && index === activeMonth - 1;
 
   return (
-    <g key={`dot-${index}`}>
-      {/* Titik Lingkaran Grafik */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={isCurrentActive ? 5 : 3.5}
-        fill={isCurrentActive ? '#06b6d4' : '#020617'}
-        stroke="#06b6d4"
-        strokeWidth={2}
-      />
-
-      {/* Ikon Pesawat Terbang Menempel Presisi di Garis Bulan Aktif */}
-      {isCurrentActive && (
-        <g
-          transform={`translate(${cx}, ${cy})`}
-          style={{ transition: 'transform 0.8s ease-in-out' }}
-        >
-          {/* Pulsasi Glow di Atas Titik */}
-          <circle r="9" fill="#06b6d4" opacity="0.3" className="animate-ping" />
-          <circle r="4" fill="#06b6d4" stroke="#ffffff" strokeWidth="1" />
-
-          {/* Ikon Pesawat Terorientasi Menanjak/Menurun Sesuai Garis */}
-          <g>
-            <g transform="translate(-12, -12)">
-              <path
-                d="M21 12L3 4l3 8-3 8 18-8z"
-                fill="#06b6d4"
-                stroke="#ffffff"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-                filter="drop-shadow(0px 0px 6px #06b6d4)"
-              />
-            </g>
-          </g>
-        </g>
-      )}
-    </g>
+    <circle
+      key={`dot-${index}`}
+      cx={cx}
+      cy={cy}
+      r={isCurrentActive ? 4.5 : 3}
+      fill={isCurrentActive ? '#67e8f9' : '#0f172a'}
+      stroke="#67e8f9"
+      strokeWidth={1.5}
+    />
   );
 };
 
@@ -160,6 +135,7 @@ export const OverviewPanel: React.FC = () => {
       return {
         monthNum: mNum,
         monthFull: MONTH_NAMES_FULL[mNum - 1],
+        monthShort: MONTH_NAMES_SHORT[mNum - 1],
         volume: stats.volume,
         avgDelay: avgD == null ? null : Number(avgD.toFixed(1)),
       };
@@ -171,11 +147,11 @@ export const OverviewPanel: React.FC = () => {
   }, [fullMonthlyTrend, zoomRange]);
   const peakMonth = visibleMonthlyTrend.reduce(
     (peak, month) => month.volume > peak.volume ? month : peak,
-    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: null, monthNum: 0 },
+    visibleMonthlyTrend[0] ?? { monthFull: '—', monthShort: '—', volume: 0, avgDelay: null, monthNum: 0 },
   );
   const quietMonth = visibleMonthlyTrend.reduce(
     (quiet, month) => month.volume < quiet.volume ? month : quiet,
-    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: null, monthNum: 0 },
+    visibleMonthlyTrend[0] ?? { monthFull: '—', monthShort: '—', volume: 0, avgDelay: null, monthNum: 0 },
   );
   const busiestCarrier = dynamicTopCarriers[0];
 
@@ -303,10 +279,10 @@ export const OverviewPanel: React.FC = () => {
           <div className="mt-3 border-t border-slate-700/70 pt-3">
             <p className="text-[10px] uppercase tracking-wide text-slate-400">Bulan dengan volume agregat tertinggi</p>
             <p className="mt-1 font-mono text-sm font-bold text-cyan-200">
-              {peakMonth.monthFull} <span className="font-normal text-slate-300">· {formatNum(peakMonth.volume)}</span>
+              {peakMonth.monthShort} <span className="font-normal text-slate-300">· {formatNum(peakMonth.volume)}</span>
             </p>
             <p className="mt-1 text-[10px] text-slate-400">
-              Terendah: {quietMonth.monthFull} · {formatNum(quietMonth.volume)}. Dijumlahkan lintas tahun terpilih.
+              Terendah: {quietMonth.monthShort} · {formatNum(quietMonth.volume)}. Total lintas tahun terpilih.
             </p>
           </div>
         </div>
@@ -317,7 +293,7 @@ export const OverviewPanel: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
               <div>
                 <h3 className="text-xs font-bold text-slate-100 font-mono uppercase tracking-wider">
-                  Tren Bulanan Volume Penerbangan (Januari – Desember)
+                  Tren volume bulanan · Jan–Des
                 </h3>
                 <p className="text-[10px] text-slate-400">
                   {zoomLevel > 1 ? `Skala Zoom: ${(zoomLevel * 100).toFixed(0)}%` : 'Tampilan Utama 100%'}
@@ -376,9 +352,9 @@ export const OverviewPanel: React.FC = () => {
 
             {/* BAR STATUS BULAN DIPILIH */}
             {activeMonth !== null && (
-              <div className="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-mono flex items-center justify-between">
+              <div className="px-3 py-1.5 rounded-lg bg-slate-900/70 border border-slate-700 text-slate-300 text-xs flex items-center justify-between">
                 <span>
-                  📅 Memantau Data Khusus Bulan: <strong>{MONTH_NAMES_FULL[activeMonth - 1]}</strong>
+                  Bulan terpilih: <strong className="text-white">{MONTH_NAMES_SHORT[activeMonth - 1]}</strong>
                 </span>
               </div>
             )}
@@ -389,11 +365,11 @@ export const OverviewPanel: React.FC = () => {
                 <AreaChart data={visibleMonthlyTrend} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis
-                    dataKey="monthFull"
+                    dataKey="monthShort"
+                    interval={0}
                     stroke="#94a3b8"
-                    fontSize={11}
+                    fontSize={10}
                     tickLine={false}
-                    tickFormatter={(val) => (val.length > 7 ? val.slice(0, 3) : val)}
                   />
                   <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                   <Tooltip
@@ -404,22 +380,25 @@ export const OverviewPanel: React.FC = () => {
                       fontSize: '12px',
                     }}
                     formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Volume Penerbangan']}
-                    labelFormatter={(label) => `Bulan: ${label}`}
+                    labelFormatter={(label) => {
+                      const monthIndex = MONTH_NAMES_SHORT.indexOf(String(label));
+                      return `Bulan: ${monthIndex >= 0 ? MONTH_NAMES_FULL[monthIndex] : label}`;
+                    }}
                   />
                   <Area
                     type="monotone"
                     dataKey="volume"
                     stroke="#06b6d4"
                     fill="#06b6d4"
-                    fillOpacity={0.2}
-                    strokeWidth={2.5}
-                    dot={<CustomPlaneDot activeMonth={activeMonth} />}
+                    fillOpacity={0.1}
+                    strokeWidth={2}
+                    dot={<ActiveMonthDot activeMonth={activeMonth} />}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
             <InsightCard title="Pola volume bulanan">
-              Puncak pada {peakMonth.monthFull} dan terendah pada {quietMonth.monthFull}. Ini jumlah keberangkatan
+              Puncak pada {peakMonth.monthShort} dan terendah pada {quietMonth.monthShort}. Ini jumlah keberangkatan
               lintas tahun terpilih, bukan bukti musiman; besarnya volume menunjukkan aktivitas, bukan penyebab delay.
             </InsightCard>
           </div>
@@ -427,7 +406,7 @@ export const OverviewPanel: React.FC = () => {
           {/* MASKAPAI TERATAS */}
           <div className="p-6 rounded-3xl cockpit-card-normal">
             <h3 className="text-xs font-bold text-slate-100 font-mono uppercase mb-1 tracking-wider">
-              Maskapai Teratas Berdasarkan Volume Penerbangan {activeMonth ? `(${MONTH_NAMES_FULL[activeMonth - 1]})` : ''}
+              Maskapai teratas menurut volume {activeMonth ? `· ${MONTH_NAMES_SHORT[activeMonth - 1]}` : ''}
             </h3>
             <p className="mb-3 text-[10px] text-slate-400">Delapan kode dengan keberangkatan terbanyak pada filter ini.</p>
             <div className="h-44 w-full">

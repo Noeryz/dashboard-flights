@@ -49,7 +49,6 @@ export default function App() {
   useEffect(() => {
     if (viewState === 'TRANSITION') {
       const video = transitionVideoRef.current;
-      let timer: ReturnType<typeof setTimeout>;
 
       if (video) {
         video.currentTime = 0;
@@ -57,19 +56,19 @@ export default function App() {
           console.warn('Autoplay diblokir browser, langsung ke dashboard:', err);
           handleTransitionEnd();
         });
-
-        timer = setTimeout(() => {
-          handleTransitionEnd();
-        }, 5000);
       } else {
         handleTransitionEnd();
       }
-
-      return () => {
-        if (timer) clearTimeout(timer);
-      };
     }
   }, [viewState]);
+
+  const handleTransitionTimeUpdate = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget;
+    if (video.currentTime >= 2.04) {
+      video.pause();
+      handleTransitionEnd();
+    }
+  };
 
   const handleReturnHero = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -93,15 +92,11 @@ export default function App() {
             disablePictureInPicture
             disableRemotePlayback
             controlsList="nodownload nofullscreen noremoteplayback"
+            onTimeUpdate={handleTransitionTimeUpdate}
             onEnded={handleTransitionEnd}
             onError={handleTransitionEnd}
             className="w-full h-full object-cover pointer-events-none"
           />
-          {/* TEKS BADGE TRANSISI DIPERBARUI */}
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-6 py-2.5 rounded-full bg-slate-950/85 border border-cyan-500/40 text-cyan-400 font-mono text-xs backdrop-blur-md shadow-[0_0_25px_rgba(6,182,212,0.5)] tracking-wider uppercase flex items-center gap-3 pointer-events-none">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-            ✈ Menyiapkan ringkasan kinerja penerbangan
-          </div>
         </div>
       )}
 
@@ -125,7 +120,7 @@ export default function App() {
               <Sidebar />
 
               <main className="min-w-0 flex-1 space-y-6 overflow-x-hidden p-6">
-                <div className="flex items-center justify-between rounded-xl border border-slate-800/80 bg-slate-900/50 px-4 py-2 text-xs backdrop-blur-md">
+                <div className="flex items-center justify-between rounded-xl border border-slate-800/80 bg-slate-900/85 px-4 py-2 text-xs">
                   <span className="text-slate-300">
                     Mode tampilan:{' '}
                     <strong className={viewMode === 'analyst' ? 'text-violet-400' : 'text-cyan-400'}>
@@ -146,7 +141,7 @@ export default function App() {
               </main>
             </div>
 
-            <footer className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between border-t border-slate-800/80 bg-slate-950/90 px-6 py-2 font-mono text-[10px] text-slate-300 backdrop-blur-xl">
+            <footer className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between border-t border-slate-800/80 bg-slate-950 px-6 py-2 font-mono text-[10px] text-slate-300">
               <div className="flex items-center gap-2 text-cyan-400">
                 <span>ANALISIS PENERBANGAN</span>
                 <span className="text-slate-600">|</span>
