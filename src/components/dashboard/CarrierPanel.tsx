@@ -5,7 +5,18 @@ import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
 import { InsightCard } from './InsightCard';
 import { Building2, Search, Play, Pause, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Line,
+} from 'recharts';
 
 export const CarrierPanel: React.FC = () => {
   const { rawRows, filters, viewMode } = useFlightStore();
@@ -113,6 +124,10 @@ export const CarrierPanel: React.FC = () => {
     carrierMetrics.filter(
       (carrier) => carrier.code.toLowerCase().includes(searchTerm.toLowerCase())
     ), [carrierMetrics, searchTerm]);
+  const volumeDelayCarriers = useMemo(
+    () => [...filteredCarriers].sort((a, b) => b.totalFlights - a.totalFlights).slice(0, 12),
+    [filteredCarriers],
+  );
   const chartCarriers = metricToggle === 'duration'
     ? filteredCarriers.filter((carrier) => carrier.avgDelay !== null)
     : filteredCarriers;
@@ -134,6 +149,11 @@ export const CarrierPanel: React.FC = () => {
   const totalFlights = carrierMetrics.reduce((sum, carrier) => sum + carrier.totalFlights, 0);
   const totalDelayedFlights = carrierMetrics.reduce((sum, carrier) => sum + carrier.delayedFlights, 0);
   const overallDelayRate = totalFlights > 0 ? (totalDelayedFlights / totalFlights) * 100 : 0;
+  const highestDelayAmongVolumeLeaders = volumeDelayCarriers.reduce<(typeof volumeDelayCarriers)[number] | null>(
+    (highest, carrier) => !highest || carrier.delayRate > highest.delayRate ? carrier : highest,
+    null,
+  );
+  const volumeLeader = volumeDelayCarriers[0];
   const largestCarrier = carrierMetrics.reduce<(typeof carrierMetrics)[number] | null>(
     (largest, carrier) => !largest || carrier.totalFlights > largest.totalFlights ? carrier : largest,
     null,
@@ -280,6 +300,43 @@ export const CarrierPanel: React.FC = () => {
           Perbedaan ini mencerminkan skala operasi dan proporsi yang berbeda, bukan sebab keterlambatan.
         </InsightCard>
       </div>
+
+      <section className="space-y-4 rounded-3xl cockpit-card-normal p-6">
+        <div className="border-b border-slate-800 pb-3">
+          <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+            Volume penerbangan dan tingkat delay maskapai · {filters.year === 'ALL' ? '2024–2025' : filters.year}
+          </h3>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Dua belas carrier dengan keberangkatan terbanyak · batang menunjukkan volume, garis menunjukkan proporsi penerbangan terlambat.
+          </p>
+        </div>
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={volumeDelayCarriers} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="code" stroke="#94a3b8" fontSize={11} tickLine={false} />
+              <YAxis yAxisId="volume" stroke="#94a3b8" fontSize={10} tickLine={false} />
+              <YAxis yAxisId="rate" orientation="right" stroke="#fda4af" fontSize={10} tickLine={false} unit="%" />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
+                formatter={(value, name) => [
+                  name === 'Tingkat delay' ? `${Number(value).toFixed(1)}%` : Number(value).toLocaleString('id-ID'),
+                  name,
+                ]}
+                labelFormatter={(code) => `Kode carrier: ${String(code)}`}
+              />
+              <Bar yAxisId="volume" dataKey="totalFlights" name="Keberangkatan" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+              <Line yAxisId="rate" dataKey="delayRate" name="Tingkat delay" type="monotone" stroke="#fb7185" strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        <InsightCard title="Skala operasi dan ketepatan waktu">
+          {volumeLeader && highestDelayAmongVolumeLeaders
+            ? `${volumeLeader.code} mencatat volume terbesar di antara carrier yang ditampilkan (${volumeLeader.totalFlights.toLocaleString('id-ID')} keberangkatan). Pada kelompok ${volumeDelayCarriers.length} carrier ini, tingkat delay tertinggi ada pada ${highestDelayAmongVolumeLeaders.code} (${highestDelayAmongVolumeLeaders.delayRate.toFixed(1)}%).`
+            : 'Belum ada data carrier untuk dibandingkan pada filter ini.'}{' '}
+          Tingkat delay jaringan pada filter ini {overallDelayRate.toFixed(1)}%. Volume menunjukkan banyaknya operasi, sedangkan tingkat delay adalah jumlah penerbangan terlambat dibagi keberangkatan; keduanya menggambarkan hal yang berbeda.
+        </InsightCard>
+      </section>
 
       {/* TABEL DETAIL MASKAPAI */}
       <div className="p-6 rounded-2xl bg-slate-900/85 border border-slate-800/80 space-y-4">

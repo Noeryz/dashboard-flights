@@ -1,6 +1,6 @@
 # FlightInsight
 
-Dashboard analisis deskriptif data penerbangan AS untuk meninjau volume operasi, keterlambatan, pembatalan, kapasitas, maskapai, bandara, dan rute. Visualisasi mengikuti filter tahun, bulan, dan maskapai agar pola dapat dibandingkan pada cakupan data yang sama.
+Dashboard analisis deskriptif data penerbangan AS untuk meninjau volume penerbangan, keterlambatan, pembatalan, kapasitas, maskapai, bandara, dan rute. Visualisasi mengikuti filter tahun, bulan, dan maskapai agar pola dapat dibandingkan pada cakupan data yang sama.
 
 ## Lingkup analisis
 

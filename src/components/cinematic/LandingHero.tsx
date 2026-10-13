@@ -268,10 +268,13 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onStartTransition }) =
         <div className="flex justify-between items-start">
           <div>
             <p className="text-xs text-cyan-300">
-              Ringkasan data penerbangan · 2024–2025
+              Analisis Jaringan Operasi Penerbangan 2024 - 2025
             </p>
-            <h3 className="text-3xl font-extrabold text-white mt-1">Kinerja penerbangan dalam angka.</h3>
-            <p className="text-xs text-slate-400">Ringkasan agregat untuk membaca skala dan pola operasi.</p>
+            <h3 className="mt-1 text-3xl font-extrabold text-white">
+              Skala dan Ketepatan Waktu Penerbangan
+              <span className="block">Domestik United States</span>
+            </h3>
+            <p className="text-xs text-slate-400">Menganalisis Volume Penerbangan dan Ketepatan Waktu</p>
           </div>
         </div>
 

@@ -3,11 +3,21 @@ import { useFlightStore } from '../../store/useFlightStore';
 import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
 import { Building2, MapPin, Globe, Play, Pause, ZoomIn, ZoomOut, RotateCcw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import {
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Line,
+} from 'recharts';
 import { InsightCard } from './InsightCard';
 
 export const AirportPanel: React.FC = () => {
-  const { getFilteredRows, rawRows } = useFlightStore();
+  const { getFilteredRows, rawRows, filters } = useFlightStore();
   const filteredRows = getFilteredRows();
   const airportCoverage = useMemo(() => {
     const origins = new Set(rawRows.map((row) => String(row.ORIGIN || '').trim().toUpperCase()).filter(Boolean));
@@ -129,7 +139,7 @@ export const AirportPanel: React.FC = () => {
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
               <h3 className="text-xs font-bold text-slate-100 font-mono uppercase tracking-wider flex items-center gap-2">
-                <Globe className="w-4 h-4 text-cyan-400" /> Volume Penerbangan Berdasarkan Bandara Asal
+                <Globe className="w-4 h-4 text-cyan-400" /> Volume dan Delay Bandara Asal · {filters.year === 'ALL' ? '2024–2025' : filters.year}
               </h3>
               {simulatedMonth && (
                 <p className="text-xs text-cyan-400 font-mono mt-0.5">📅 Bulan: {MONTH_NAMES_FULL[simulatedMonth - 1]}</p>
@@ -194,22 +204,40 @@ export const AirportPanel: React.FC = () => {
 
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartAirports}>
+              <ComposedChart data={chartAirports}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis dataKey="airport" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
+                <YAxis yAxisId="volume" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                <YAxis yAxisId="rate" orientation="right" stroke="#fda4af" fontSize={10} tickLine={false} unit="%" />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
-                  formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Volume Penerbangan']}
+                  formatter={(value, name) => [
+                    name === 'Tingkat delay'
+                      ? `${Number(value).toFixed(1)}%`
+                      : Number(value).toLocaleString('id-ID'),
+                    name,
+                  ]}
                 />
-                <Bar dataKey="flights" fill="#06b6d4" radius={[6, 6, 0, 0]}>
+                <Bar yAxisId="volume" dataKey="flights" name="Keberangkatan" fill="#06b6d4" radius={[6, 6, 0, 0]}>
                   {chartAirports.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#06b6d4'} />
                   ))}
                 </Bar>
-              </BarChart>
+                <Line
+                  yAxisId="rate"
+                  dataKey="delayRate"
+                  name="Tingkat delay"
+                  type="monotone"
+                  stroke="#fb7185"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
+          <p className="text-[10px] text-slate-400">
+            Batang menunjukkan jumlah keberangkatan (sumbu kiri); garis menunjukkan proporsi penerbangan terlambat (sumbu kanan).
+          </p>
           <InsightCard title="Volume dan proporsi delay">
             {topAirport
               ? `Dari ${totalAirportFlights.toLocaleString('id-ID')} keberangkatan pada jaringan yang difilter, ${totalDelayedFlights.toLocaleString('id-ID')} mengalami keterlambatan (${networkDelayRate.toFixed(1)}%). Angka ini adalah jumlah penerbangan terlambat dibagi seluruh keberangkatan, bukan persentase menit keterlambatan. ${topAirport.airport} menangani ${(totalAirportFlights > 0 ? (topAirport.flights / totalAirportFlights) * 100 : 0).toFixed(1)}% keberangkatan; ${topAirport.delayRate.toFixed(1)}% keberangkatannya terlambat, ${(topAirport.delayRate - networkDelayRate >= 0 ? 'lebih tinggi' : 'lebih rendah')} ${Math.abs(topAirport.delayRate - networkDelayRate).toFixed(1)} poin persentase dari tingkat jaringan.`

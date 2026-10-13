@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
-import { getDelayDurationObservation } from '../../utils/flightAnalytics';
+import { MONTH_NAMES_FULL, MONTH_NAMES_SHORT } from '../../utils/constants';
 import { InsightCard } from './InsightCard';
 import {
   Activity,
@@ -19,10 +19,11 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import {
-  AreaChart,
   Area,
+  ComposedChart,
   BarChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -31,16 +32,6 @@ import {
   Cell,
 } from 'recharts';
 import { getCarrierDisplayName } from '../../utils/referenceData';
-
-// Nama Bulan (Lokal)
-const MONTH_NAMES_FULL = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-];
-const MONTH_NAMES_SHORT = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-];
 
 interface ActiveMonthDotProps {
   cx?: number;
@@ -68,7 +59,7 @@ const ActiveMonthDot: React.FC<ActiveMonthDotProps> = ({ cx, cy, index = -1, act
 };
 
 export const OverviewPanel: React.FC = () => {
-  const { getCalculatedKPIs, getFilteredRows } = useFlightStore();
+  const { getCalculatedKPIs, getFilteredRows, rawRows, filters } = useFlightStore();
   const kpis = getCalculatedKPIs();
   const filteredRows = getFilteredRows();
 
@@ -114,45 +105,50 @@ export const OverviewPanel: React.FC = () => {
   }, [filteredRows, activeMonth]);
 
   const fullMonthlyTrend = useMemo(() => {
-    const monthStats: Record<number, { volume: number; delaySum: number; delayedFlights: number }> = {};
-    for (let m = 1; m <= 12; m++) monthStats[m] = { volume: 0, delaySum: 0, delayedFlights: 0 };
+    const monthStats: Record<number, { volume: number; delayedFlights: number }> = {};
+    for (let m = 1; m <= 12; m++) monthStats[m] = { volume: 0, delayedFlights: 0 };
 
-    filteredRows.forEach((r) => {
+    rawRows.forEach((r) => {
+      if (filters.year !== 'ALL' && String(r.YEAR) !== filters.year) return;
+      if (filters.carrier !== 'ALL' && String(r.UNIQUE_CARRIER || '').trim().toUpperCase() !== filters.carrier) return;
       const m = Number(r.MONTH || 1);
-      const f = Number(r.DEPARTURES_PERFORMED || 0);
-      const durationObservation = getDelayDurationObservation(r);
 
       if (monthStats[m]) {
-        monthStats[m].volume += f;
-        monthStats[m].delaySum += durationObservation.delayMinutes;
-        monthStats[m].delayedFlights += durationObservation.delayedFlights;
+        monthStats[m].volume += Number(r.DEPARTURES_PERFORMED || 0);
+        monthStats[m].delayedFlights += Number(r.ARR_DELAY_FLIGHTS || 0);
       }
     });
 
     return Object.entries(monthStats).map(([mStr, stats]) => {
       const mNum = Number(mStr);
-      const avgD = stats.delayedFlights > 0 ? stats.delaySum / stats.delayedFlights : null;
       return {
         monthNum: mNum,
         monthFull: MONTH_NAMES_FULL[mNum - 1],
         monthShort: MONTH_NAMES_SHORT[mNum - 1],
         volume: stats.volume,
-        avgDelay: avgD == null ? null : Number(avgD.toFixed(1)),
+        delayedFlights: stats.delayedFlights,
+        delayRate: stats.volume > 0 ? Number(((stats.delayedFlights / stats.volume) * 100).toFixed(1)) : null,
       };
     });
-  }, [filteredRows]);
+  }, [rawRows, filters.year, filters.carrier]);
 
   const visibleMonthlyTrend = useMemo(() => {
     return fullMonthlyTrend.slice(zoomRange[0], zoomRange[1] + 1);
   }, [fullMonthlyTrend, zoomRange]);
   const peakMonth = visibleMonthlyTrend.reduce(
     (peak, month) => month.volume > peak.volume ? month : peak,
-    visibleMonthlyTrend[0] ?? { monthFull: '—', monthShort: '—', volume: 0, avgDelay: null, monthNum: 0 },
+    visibleMonthlyTrend[0] ?? { monthFull: '—', monthShort: '—', volume: 0, delayedFlights: 0, delayRate: null, monthNum: 0 },
   );
   const quietMonth = visibleMonthlyTrend.reduce(
     (quiet, month) => month.volume < quiet.volume ? month : quiet,
-    visibleMonthlyTrend[0] ?? { monthFull: '—', monthShort: '—', volume: 0, avgDelay: null, monthNum: 0 },
+    visibleMonthlyTrend[0] ?? { monthFull: '—', monthShort: '—', volume: 0, delayedFlights: 0, delayRate: null, monthNum: 0 },
   );
+  const highestMonthlyDelayRate = visibleMonthlyTrend
+    .filter((month) => month.volume > 0 && month.delayRate !== null)
+    .reduce<(typeof visibleMonthlyTrend)[number] | null>(
+      (highest, month) => !highest || (month.delayRate ?? 0) > (highest.delayRate ?? 0) ? month : highest,
+      null,
+    );
   const busiestCarrier = dynamicTopCarriers[0];
 
   const handleZoomIn = () => {
@@ -195,7 +191,7 @@ export const OverviewPanel: React.FC = () => {
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-200">Problem Statement</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Bagaimana distribusi ketepatan waktu (delay) dan volume operasi antar maskapai, bandara, dan bulan, serta kategori keterlambatan mana yang mencatat menit delay terbanyak?
+              Bagaimana distribusi ketepatan waktu (delay) dan volume penerbangan antar maskapai, bandara, dan bulan, serta kategori keterlambatan mana yang mencatat menit delay terbanyak?
             </p>
           </div>
         </div>
@@ -279,10 +275,10 @@ export const OverviewPanel: React.FC = () => {
           <div className="mt-3 border-t border-slate-700/70 pt-3">
             <p className="text-[10px] uppercase tracking-wide text-slate-400">Bulan dengan volume agregat tertinggi</p>
             <p className="mt-1 font-mono text-sm font-bold text-cyan-200">
-              {peakMonth.monthShort} <span className="font-normal text-slate-300">· {formatNum(peakMonth.volume)}</span>
+              {peakMonth.monthFull} <span className="font-normal text-slate-300">· {formatNum(peakMonth.volume)}</span>
             </p>
             <p className="mt-1 text-[10px] text-slate-400">
-              Terendah: {quietMonth.monthShort} · {formatNum(quietMonth.volume)}. Total lintas tahun terpilih.
+              Terendah: {quietMonth.monthFull} · {formatNum(quietMonth.volume)}. Total lintas tahun terpilih.
             </p>
           </div>
         </div>
@@ -293,7 +289,7 @@ export const OverviewPanel: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
               <div>
                 <h3 className="text-xs font-bold text-slate-100 font-mono uppercase tracking-wider">
-                  Tren volume bulanan · Jan–Des
+                  Volume penerbangan dan tingkat delay bulanan · {filters.year === 'ALL' ? '2024–2025' : filters.year}
                 </h3>
                 <p className="text-[10px] text-slate-400">
                   {zoomLevel > 1 ? `Skala Zoom: ${(zoomLevel * 100).toFixed(0)}%` : 'Tampilan Utama 100%'}
@@ -354,7 +350,7 @@ export const OverviewPanel: React.FC = () => {
             {activeMonth !== null && (
               <div className="px-3 py-1.5 rounded-lg bg-slate-900/70 border border-slate-700 text-slate-300 text-xs flex items-center justify-between">
                 <span>
-                  Bulan terpilih: <strong className="text-white">{MONTH_NAMES_SHORT[activeMonth - 1]}</strong>
+                  Bulan terpilih: <strong className="text-white">{MONTH_NAMES_FULL[activeMonth - 1]}</strong>
                 </span>
               </div>
             )}
@@ -362,7 +358,7 @@ export const OverviewPanel: React.FC = () => {
             {/* GRAFIK KURVA RECHARTS */}
             <div className="h-56 w-full relative">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={visibleMonthlyTrend} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                <ComposedChart data={visibleMonthlyTrend} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis
                     dataKey="monthShort"
@@ -371,7 +367,8 @@ export const OverviewPanel: React.FC = () => {
                     fontSize={10}
                     tickLine={false}
                   />
-                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
+                  <YAxis yAxisId="volume" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                  <YAxis yAxisId="rate" orientation="right" stroke="#fda4af" fontSize={10} tickLine={false} unit="%" />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#020617',
@@ -379,34 +376,55 @@ export const OverviewPanel: React.FC = () => {
                       borderRadius: '12px',
                       fontSize: '12px',
                     }}
-                    formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Volume Penerbangan']}
+                    formatter={(value, name) => [
+                      name === 'Tingkat delay'
+                        ? value == null ? 'Tidak tersedia' : `${Number(value).toFixed(1)}%`
+                        : Number(value).toLocaleString('id-ID'),
+                      name,
+                    ]}
                     labelFormatter={(label) => {
                       const monthIndex = MONTH_NAMES_SHORT.indexOf(String(label));
                       return `Bulan: ${monthIndex >= 0 ? MONTH_NAMES_FULL[monthIndex] : label}`;
                     }}
                   />
                   <Area
+                    yAxisId="volume"
                     type="monotone"
                     dataKey="volume"
+                    name="Keberangkatan"
                     stroke="#06b6d4"
                     fill="#06b6d4"
                     fillOpacity={0.1}
                     strokeWidth={2}
                     dot={<ActiveMonthDot activeMonth={activeMonth} />}
                   />
-                </AreaChart>
+                  <Line
+                    yAxisId="rate"
+                    type="monotone"
+                    dataKey="delayRate"
+                    name="Tingkat delay"
+                    stroke="#fb7185"
+                    strokeWidth={2}
+                    connectNulls={false}
+                    dot={{ r: 3 }}
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
+            <p className="text-[10px] text-slate-400">
+              Area: jumlah keberangkatan (sumbu kiri). Garis: penerbangan terlambat dibagi keberangkatan (sumbu kanan). Grafik membandingkan semua bulan; filter bulan tidak diterapkan agar pola tahunan tetap terbaca.
+            </p>
             <InsightCard title="Pola volume bulanan">
-              Puncak pada {peakMonth.monthShort} dan terendah pada {quietMonth.monthShort}. Ini jumlah keberangkatan
-              lintas tahun terpilih, bukan bukti musiman; besarnya volume menunjukkan aktivitas, bukan penyebab delay.
+              Volume tertinggi terjadi pada {peakMonth.monthFull} ({formatNum(peakMonth.volume)} keberangkatan), sedangkan yang terendah pada {quietMonth.monthFull} ({formatNum(quietMonth.volume)}).
+              {highestMonthlyDelayRate && <> Tingkat delay tertinggi tercatat pada {highestMonthlyDelayRate.monthFull}: {highestMonthlyDelayRate.delayRate?.toFixed(1)}% ({formatNum(highestMonthlyDelayRate.delayedFlights)} dari {formatNum(highestMonthlyDelayRate.volume)} keberangkatan).</>}
+              {' '}Puncak volume dan puncak proporsi delay tidak selalu bertepatan. Perbandingan ini menunjukkan pola bulanan, bukan penyebab keterlambatan.
             </InsightCard>
           </div>
 
           {/* MASKAPAI TERATAS */}
           <div className="p-6 rounded-3xl cockpit-card-normal">
             <h3 className="text-xs font-bold text-slate-100 font-mono uppercase mb-1 tracking-wider">
-              Maskapai teratas menurut volume {activeMonth ? `· ${MONTH_NAMES_SHORT[activeMonth - 1]}` : ''}
+              Maskapai teratas menurut volume {activeMonth ? `· ${MONTH_NAMES_FULL[activeMonth - 1]}` : ''}
             </h3>
             <p className="mb-3 text-[10px] text-slate-400">Delapan kode dengan keberangkatan terbanyak pada filter ini.</p>
             <div className="h-44 w-full">

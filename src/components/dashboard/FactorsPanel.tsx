@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { InsightCard } from './InsightCard';
 
 export const FactorsPanel: React.FC = () => {
-  const { getFilteredRows } = useFlightStore();
+  const { getFilteredRows, filters } = useFlightStore();
   const filteredRows = getFilteredRows();
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -70,7 +70,7 @@ export const FactorsPanel: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white uppercase font-mono tracking-wider">
-              Kategori Keterlambatan Penerbangan
+              Kategori Keterlambatan · {filters.year === 'ALL' ? '2024–2025' : filters.year}
             </h2>
             <p className="text-xs text-slate-300">Akumulasi menit pada lima kategori laporan</p>
           </div>
@@ -87,7 +87,7 @@ export const FactorsPanel: React.FC = () => {
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
             <h3 className="text-xs font-bold text-slate-100 font-mono uppercase tracking-wider">
-              Total Menit Delay Per Kategori
+              Akumulasi menit delay menurut kategori · {filters.year === 'ALL' ? '2024–2025' : filters.year}
             </h3>
             {simulatedMonth && (
               <p className="text-xs text-cyan-400 font-mono mt-0.5">📅 Bulan: {MONTH_NAMES_FULL[simulatedMonth - 1]}</p>
@@ -152,14 +152,12 @@ export const FactorsPanel: React.FC = () => {
         </div>
         <InsightCard title="Porsi menit delay">
           {leadingFactor && totalDelayMinutes > 0
-            ? `${leadingFactor.factor} menjadi kontributor menit terbesar pada filter ini: ${leadingFactor.minutes.toLocaleString('id-ID')} menit atau ${leadingShare.toFixed(1)}% dari total yang diklasifikasikan.`
+            ? `Pada filter ini, ${leadingFactor.factor} mencatat akumulasi terbesar: ${leadingFactor.minutes.toLocaleString('id-ID')} menit dari total ${totalDelayMinutes.toLocaleString('id-ID')} menit pada lima kategori (${leadingShare.toFixed(1)}%).`
             : 'Belum ada menit keterlambatan yang tercatat pada filter ini.'}{' '}
-          Ini porsi durasi tercatat, bukan jumlah kejadian; selisih dapat mencerminkan frekuensi maupun lamanya delay.{' '}
+          Persentase ini membandingkan menit kategori teratas dengan jumlah menit lima kategori—bukan persentase semua menit delay atau jumlah penerbangan terdampak. Kategori laporan juga tidak memastikan penyebab awal.{' '}
           {leadingFactor && totalDelayMinutes > 0 && (
             <>
-              {secondFactor && <> Berikutnya, {secondFactor.factor} mencatat{' '}
-                {((secondFactor.minutes / totalDelayMinutes) * 100).toFixed(1)}%.</>}
-              {' '}Data agregat tidak memastikan penyebab awal.
+              {secondFactor && <> Berikutnya {secondFactor.factor} mencatat {secondFactor.minutes.toLocaleString('id-ID')} menit ({((secondFactor.minutes / totalDelayMinutes) * 100).toFixed(1)}%), selisih {(leadingFactor.minutes - secondFactor.minutes).toLocaleString('id-ID')} menit dari kategori teratas.</>}
             </>
           )}
         </InsightCard>
