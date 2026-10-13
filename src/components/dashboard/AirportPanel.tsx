@@ -89,8 +89,9 @@ export const AirportPanel: React.FC = () => {
 
   const chartAirports = airportStats.slice(0, zoomLimit);
   const totalAirportFlights = airportStats.reduce((sum, airport) => sum + airport.flights, 0);
+  const totalDelayedFlights = airportStats.reduce((sum, airport) => sum + airport.delayedFlights, 0);
   const networkDelayRate = totalAirportFlights > 0
-    ? (airportStats.reduce((sum, airport) => sum + airport.delayedFlights, 0) / totalAirportFlights) * 100
+    ? (totalDelayedFlights / totalAirportFlights) * 100
     : 0;
   const topAirport = airportStats[0];
   const highestDelayAirport = airportStats
@@ -211,7 +212,7 @@ export const AirportPanel: React.FC = () => {
           </div>
           <InsightCard title="Volume dan proporsi delay">
             {topAirport
-              ? `${topAirport.airport} menangani ${(totalAirportFlights > 0 ? (topAirport.flights / totalAirportFlights) * 100 : 0).toFixed(1)}% keberangkatan; tingkat keterlambatannya ${topAirport.delayRate.toFixed(1)}%, dibanding ${networkDelayRate.toFixed(1)}% pada jaringan.`
+              ? `Dari ${totalAirportFlights.toLocaleString('id-ID')} keberangkatan pada jaringan yang difilter, ${totalDelayedFlights.toLocaleString('id-ID')} mengalami keterlambatan (${networkDelayRate.toFixed(1)}%). Angka ini adalah jumlah penerbangan terlambat dibagi seluruh keberangkatan, bukan persentase menit keterlambatan. ${topAirport.airport} menangani ${(totalAirportFlights > 0 ? (topAirport.flights / totalAirportFlights) * 100 : 0).toFixed(1)}% keberangkatan; ${topAirport.delayRate.toFixed(1)}% keberangkatannya terlambat, ${(topAirport.delayRate - networkDelayRate >= 0 ? 'lebih tinggi' : 'lebih rendah')} ${Math.abs(topAirport.delayRate - networkDelayRate).toFixed(1)} poin persentase dari tingkat jaringan.`
               : 'Belum ada baris bandara pada filter ini.'}{' '}
             {highestDelayAirport
               ? `Persentase keterlambatan tertinggi*: ${highestDelayAirport.airport} (${highestDelayAirport.delayRate.toFixed(1)}%).`
