@@ -278,7 +278,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ origin, destination }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center gap-2">
           <Compass className="w-5 h-5 text-flight-cyan" />
-          <h3 className="text-sm font-bold text-white">Peta Interaktif & Rute Penerbangan Real-Time</h3>
+          <h3 className="text-sm font-bold text-white">Peta interaktif rute penerbangan</h3>
         </div>
         {distanceMiles > 0 && (
           <span className="text-xs font-mono font-bold text-flight-cyan bg-slate-950 px-3 py-1 rounded-lg border border-slate-800 w-fit">
@@ -297,6 +297,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ origin, destination }) => {
               <button
                 key={mode}
                 onClick={() => setMapMode(mode)}
+                aria-pressed={isActive}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   isActive
                     ? 'bg-flight-cyan text-slate-950 font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]'

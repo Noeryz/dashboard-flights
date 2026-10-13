@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
+import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { InsightCard } from './InsightCard';
 import {
   Activity,
@@ -15,6 +16,7 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  HelpCircle,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -28,6 +30,7 @@ import {
   CartesianGrid,
   Cell,
 } from 'recharts';
+import { getCarrierDisplayName } from '../../utils/referenceData';
 
 // Nama Bulan (Lokal)
 const MONTH_NAMES_FULL = [
@@ -142,24 +145,23 @@ export const OverviewPanel: React.FC = () => {
     filteredRows.forEach((r) => {
       const m = Number(r.MONTH || 1);
       const f = Number(r.DEPARTURES_PERFORMED || 0);
-      const dMins = Number(r.TOTAL_ARR_DELAY_MINUTES || 0);
-      const dFlights = Number(r.ARR_DELAY_FLIGHTS || 0);
+      const durationObservation = getDelayDurationObservation(r);
 
       if (monthStats[m]) {
         monthStats[m].volume += f;
-        monthStats[m].delaySum += dMins;
-        monthStats[m].delayedFlights += dFlights;
+        monthStats[m].delaySum += durationObservation.delayMinutes;
+        monthStats[m].delayedFlights += durationObservation.delayedFlights;
       }
     });
 
     return Object.entries(monthStats).map(([mStr, stats]) => {
       const mNum = Number(mStr);
-      const avgD = stats.delayedFlights > 0 ? stats.delaySum / stats.delayedFlights : 0;
+      const avgD = stats.delayedFlights > 0 ? stats.delaySum / stats.delayedFlights : null;
       return {
         monthNum: mNum,
         monthFull: MONTH_NAMES_FULL[mNum - 1],
         volume: stats.volume,
-        avgDelay: Number(avgD.toFixed(1)),
+        avgDelay: avgD == null ? null : Number(avgD.toFixed(1)),
       };
     });
   }, [filteredRows]);
@@ -169,11 +171,11 @@ export const OverviewPanel: React.FC = () => {
   }, [fullMonthlyTrend, zoomRange]);
   const peakMonth = visibleMonthlyTrend.reduce(
     (peak, month) => month.volume > peak.volume ? month : peak,
-    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: 0, monthNum: 0 },
+    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: null, monthNum: 0 },
   );
   const quietMonth = visibleMonthlyTrend.reduce(
     (quiet, month) => month.volume < quiet.volume ? month : quiet,
-    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: 0, monthNum: 0 },
+    visibleMonthlyTrend[0] ?? { monthFull: '—', volume: 0, avgDelay: null, monthNum: 0 },
   );
   const busiestCarrier = dynamicTopCarriers[0];
 
@@ -208,6 +210,32 @@ export const OverviewPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <section className="rounded-3xl cockpit-card-cyan p-6">
+        <div className="flex items-center gap-2">
+          <HelpCircle className="h-5 w-5 text-cyan-300" />
+          <h2 className="font-mono text-sm font-bold uppercase tracking-wide text-white">Rumusan Masalah</h2>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-200">Fenomena yang dikaji</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+              Bagaimana volume operasi dan keterlambatan terlihat dalam data, serta bagaimana polanya berbeda antarbulan,
+              maskapai, bandara, serta rute?
+            </p>
+          </div>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-200">Pertanyaan analisis</h3>
+            <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm leading-relaxed text-slate-300">
+              <li>Di mana volume dan keterlambatan paling menonjol?</li>
+              <li>Bagaimana pola keterlambatan berbeda antarbandara dan rute?</li>
+            </ol>
+          </div>
+        </div>
+        <p className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-400">
+          Filter tahun, bulan, dan maskapai mengubah semua angka pada ringkasan.
+        </p>
+      </section>
+
       {/* 6 KARTU RINGKASAN UTAMA */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-4 rounded-2xl cockpit-card-cyan">
@@ -239,7 +267,9 @@ export const OverviewPanel: React.FC = () => {
             <span>Rata-Rata Delay</span>
             <Clock className="w-3.5 h-3.5 text-cyan-400" />
           </div>
-          <p className="text-xl font-black font-mono text-cyan-300 mt-2">{kpis.avgDelayMinutes} mnt</p>
+          <p className="text-xl font-black font-mono text-cyan-300 mt-2">
+            {kpis.avgDelayMinutes == null ? 'Tidak tersedia' : `${kpis.avgDelayMinutes} mnt`}
+          </p>
         </div>
 
         <div className="p-4 rounded-2xl cockpit-card-normal">
@@ -259,37 +289,33 @@ export const OverviewPanel: React.FC = () => {
         </div>
       </div>
 
+      <InsightCard title="Cara membaca ringkasan">
+        Delay rate = frekuensi; rata-rata menit = durasi pada catatan yang memiliki menit teramati. Pembatalan
+        dibandingkan dengan jadwal, load factor membandingkan penumpang dengan kursi. Data berupa agregat bulanan,
+        bukan catatan tiap penerbangan.
+      </InsightCard>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ESTIMASI KERUGIAN FINANSIAL */}
-        <div className="lg:col-span-5 p-6 rounded-3xl cockpit-card-cyan flex flex-col justify-between space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-cyan-400" /> Estimasi Kerugian Finansial
-            </h3>
-            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              Berdasarkan standar FAA APO-100 ($111,68 per menit delay), akumulasi biaya akibat keterlambatan operasional dan penundaan penumpang mencapai:
+        <div className="lg:col-span-5 rounded-3xl cockpit-card-cyan p-6">
+          <h3 className="flex items-center gap-2 font-mono text-sm font-bold uppercase tracking-wider text-white">
+            <DollarSign className="h-4 w-4 text-cyan-400" /> Estimasi biaya delay
+          </h3>
+
+          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/65 p-4 font-mono">
+            <p className="text-2xl font-black text-rose-300">
+              ${(kpis.totalEconomicCostUSD / 1000000000).toFixed(2)} miliar USD
             </p>
+            <p className="mt-1 text-[10px] text-slate-400">Asumsi FAA APO-100 · bukan biaya aktual</p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-center space-y-1">
-            <span className="text-xs text-slate-400 uppercase">Kerugian Ekonomi Nasional</span>
-            <p className="text-2xl font-black text-rose-400">
-              ${(kpis.totalEconomicCostUSD / 1000000000).toFixed(2)} Miliar USD
+          <div className="mt-3 border-t border-slate-700/70 pt-3">
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Bulan dengan volume agregat tertinggi</p>
+            <p className="mt-1 font-mono text-sm font-bold text-cyan-200">
+              {peakMonth.monthFull} <span className="font-normal text-slate-300">· {formatNum(peakMonth.volume)}</span>
             </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 space-y-2">
-            <p className="font-bold text-cyan-300">📌 Catatan Tren Musiman:</p>
-            <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-300">
-              <li>
-                Volume keberangkatan terbesar pada filter aktif terjadi di <strong>{peakMonth.monthFull}</strong>
-                {' '}({formatNum(peakMonth.volume)} keberangkatan), bukan otomatis bukti musim liburan.
-              </li>
-              <li>
-                OTP agregat pada filter aktif: <strong>{kpis.otpRate}%</strong>; indikator ini dihitung sebagai
-                100% dikurangi delay rate agregat yang tersedia.
-              </li>
-            </ul>
+            <p className="mt-1 text-[10px] text-slate-400">
+              Terendah: {quietMonth.monthFull} · {formatNum(quietMonth.volume)}. Dijumlahkan lintas tahun terpilih.
+            </p>
           </div>
         </div>
 
@@ -400,20 +426,18 @@ export const OverviewPanel: React.FC = () => {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <InsightCard title="Insight tren bulanan">
-              Volume tertinggi dalam rentang yang terlihat terjadi pada {peakMonth.monthFull} (
-              {formatNum(peakMonth.volume)} keberangkatan), sedangkan yang terendah pada {quietMonth.monthFull} (
-              {formatNum(quietMonth.volume)}). Rata-rata keterlambatan pada bulan puncak itu adalah{' '}
-              {peakMonth.avgDelay.toFixed(1)} menit per penerbangan terlambat. Grafik ini memakai jumlah
-              keberangkatan, bukan jumlah penumpang; pola bulanan saja tidak menjelaskan penyebab perubahan.
+            <InsightCard title="Pola volume bulanan">
+              Puncak pada {peakMonth.monthFull} dan terendah pada {quietMonth.monthFull}. Ini jumlah keberangkatan
+              lintas tahun terpilih, bukan bukti musiman; besarnya volume menunjukkan aktivitas, bukan penyebab delay.
             </InsightCard>
           </div>
 
           {/* MASKAPAI TERATAS */}
           <div className="p-6 rounded-3xl cockpit-card-normal">
-            <h3 className="text-xs font-bold text-slate-100 font-mono uppercase mb-4 tracking-wider">
+            <h3 className="text-xs font-bold text-slate-100 font-mono uppercase mb-1 tracking-wider">
               Maskapai Teratas Berdasarkan Volume Penerbangan {activeMonth ? `(${MONTH_NAMES_FULL[activeMonth - 1]})` : ''}
             </h3>
+            <p className="mb-3 text-[10px] text-slate-400">Delapan kode dengan keberangkatan terbanyak pada filter ini.</p>
             <div className="h-44 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dynamicTopCarriers}>
@@ -423,6 +447,7 @@ export const OverviewPanel: React.FC = () => {
                   <Tooltip
                     contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
                     formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Jumlah Penerbangan']}
+                    labelFormatter={(carrier) => getCarrierDisplayName(String(carrier))}
                   />
                   <Bar dataKey="flights" fill="#06b6d4" radius={[6, 6, 0, 0]}>
                     {dynamicTopCarriers.map((_, idx) => (
@@ -432,12 +457,10 @@ export const OverviewPanel: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <InsightCard title="Insight maskapai teratas">
+            <InsightCard title="Temuan volume">
               {busiestCarrier
-                ? `${busiestCarrier.carrier} memiliki volume terbesar di antara 8 maskapai teratas yang ditampilkan (${formatNum(busiestCarrier.flights)} keberangkatan).`
-                : 'Belum ada data maskapai pada filter ini.'}{' '}
-              Grafik ini hanya menampilkan delapan kode teratas agar mudah dibaca; panel Performa Maskapai
-              memuat ringkasan semua maskapai yang tersedia. Volume besar bukan berarti tingkat delay lebih buruk.
+                ? `${busiestCarrier.carrier} memimpin delapan teratas dengan ${formatNum(busiestCarrier.flights)} keberangkatan. Volume mengukur skala, bukan mutu layanan.`
+                : 'Belum ada data maskapai pada filter ini.'}
             </InsightCard>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
-import { CARRIER_NAMES, FAA_ECONOMIC_CONSTANTS } from '../../utils/referenceData';
+import { CARRIER_NAMES, FAA_ECONOMIC_CONSTANTS, getCarrierDisplayName } from '../../utils/referenceData';
+import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
 import { InsightCard } from './InsightCard';
 import { Building2, Search, Play, Pause, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
@@ -36,7 +37,9 @@ export const CarrierPanel: React.FC = () => {
         code: string;
         name: string;
         totalFlights: number;
+        scheduledFlights: number;
         delayedFlights: number;
+        averageDelayFlights: number;
         cancelledFlights: number;
         weightedArrDelay: number;
         totalDelayMinutes: number;
@@ -55,9 +58,11 @@ export const CarrierPanel: React.FC = () => {
       if (!map[code]) {
         map[code] = {
           code,
-          name: CARRIER_NAMES[code] || code,
+          name: getCarrierDisplayName(code),
           totalFlights: 0,
+          scheduledFlights: 0,
           delayedFlights: 0,
+          averageDelayFlights: 0,
           cancelledFlights: 0,
           weightedArrDelay: 0,
           totalDelayMinutes: 0,
@@ -69,11 +74,14 @@ export const CarrierPanel: React.FC = () => {
       const tf = Number(row.DEPARTURES_PERFORMED) || 0;
       const dMins = Number(row.TOTAL_ARR_DELAY_MINUTES) || 0;
       const dFlights = Number(row.ARR_DELAY_FLIGHTS) || 0;
+      const durationObservation = getDelayDurationObservation(row);
 
       map[code].totalFlights += tf;
+      map[code].scheduledFlights += Number(row.SCHEDULED_FLIGHTS) || tf;
       map[code].delayedFlights += dFlights;
       map[code].cancelledFlights += Number(row.CANCELLED_FLIGHTS) || 0;
-      map[code].weightedArrDelay += dMins;
+      map[code].weightedArrDelay += durationObservation.delayMinutes;
+      map[code].averageDelayFlights += durationObservation.delayedFlights;
       map[code].totalDelayMinutes += dMins;
       map[code].totalSeats += Number(row.SEATS) || 0;
       map[code].totalPassengers += Number(row.PASSENGERS) || 0;
@@ -82,34 +90,43 @@ export const CarrierPanel: React.FC = () => {
     return Object.values(map)
       .map((item) => {
         const delayRate = item.totalFlights > 0 ? (item.delayedFlights / item.totalFlights) * 100 : 0;
-        const avgDelay = item.delayedFlights > 0 ? item.weightedArrDelay / item.delayedFlights : 0;
-        const cancelRate = item.totalFlights > 0 ? (item.cancelledFlights / item.totalFlights) * 100 : 0;
+        const avgDelay = item.averageDelayFlights > 0
+          ? item.weightedArrDelay / item.averageDelayFlights
+          : null;
+        const cancelRate = item.scheduledFlights > 0 ? (item.cancelledFlights / item.scheduledFlights) * 100 : 0;
         const loadFactor = item.totalSeats > 0 ? (item.totalPassengers / item.totalSeats) * 100 : 0;
         const economicLossUSD = item.totalDelayMinutes * FAA_ECONOMIC_CONSTANTS.TOTAL_COST_PER_MIN_USD;
 
         return {
           ...item,
           delayRate: Number(delayRate.toFixed(1)),
-          avgDelay: Number(avgDelay.toFixed(1)),
+          avgDelay: avgDelay == null ? null : Number(avgDelay.toFixed(1)),
           cancelRate: Number(cancelRate.toFixed(2)),
           loadFactor: Number(loadFactor.toFixed(1)),
           economicLossUSD: Math.round(economicLossUSD),
         };
       })
-      .sort((a, b) => (metricToggle === 'rate' ? b.delayRate - a.delayRate : b.avgDelay - a.avgDelay));
+      .sort((a, b) => metricToggle === 'rate'
+        ? b.delayRate - a.delayRate
+        : (b.avgDelay ?? -1) - (a.avgDelay ?? -1));
   }, [rawRows, filters, simulatedMonth, metricToggle]);
 
-  const displayedCarriers = useMemo(() => {
-    const filtered = carrierMetrics.filter(
+  const filteredCarriers = useMemo(() =>
+    carrierMetrics.filter(
       (c) =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.code.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ), [carrierMetrics, searchTerm]);
+  const chartCarriers = metricToggle === 'duration'
+    ? filteredCarriers.filter((carrier) => carrier.avgDelay !== null)
+    : filteredCarriers;
+  const carriersWithObservedDuration = carrierMetrics.filter((carrier) => carrier.avgDelay !== null).length;
+  const displayedCarriers = useMemo(() => {
     if (zoomLevel > 1) {
-      return filtered.slice(0, Math.max(3, Math.floor(filtered.length / zoomLevel)));
+      return chartCarriers.slice(0, Math.max(3, Math.floor(chartCarriers.length / zoomLevel)));
     }
-    return filtered;
-  }, [carrierMetrics, searchTerm, zoomLevel]);
+    return chartCarriers;
+  }, [chartCarriers, zoomLevel]);
   const highestDelayCarrier = carrierMetrics.reduce<(typeof carrierMetrics)[number] | null>(
     (highest, carrier) => !highest || carrier.delayRate > highest.delayRate ? carrier : highest,
     null,
@@ -118,6 +135,15 @@ export const CarrierPanel: React.FC = () => {
     (lowest, carrier) => !lowest || carrier.delayRate < lowest.delayRate ? carrier : lowest,
     null,
   );
+  const totalFlights = carrierMetrics.reduce((sum, carrier) => sum + carrier.totalFlights, 0);
+  const totalDelayedFlights = carrierMetrics.reduce((sum, carrier) => sum + carrier.delayedFlights, 0);
+  const overallDelayRate = totalFlights > 0 ? (totalDelayedFlights / totalFlights) * 100 : 0;
+  const largestCarrier = carrierMetrics.reduce<(typeof carrierMetrics)[number] | null>(
+    (largest, carrier) => !largest || carrier.totalFlights > largest.totalFlights ? carrier : largest,
+    null,
+  );
+  const carrierCodes = new Set(rawRows.map((row) => String(row.UNIQUE_CARRIER || '').trim()).filter(Boolean));
+  const namedCarrierCount = Array.from(carrierCodes).filter((code) => CARRIER_NAMES[code]).length;
 
   return (
     <div className="space-y-6">
@@ -129,13 +155,15 @@ export const CarrierPanel: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-white">Performa Maskapai Penerbangan</h2>
             <p className="text-slate-400 text-xs">
-              Peringkat keandalan operasional maskapai domestik berdasarkan tingkat delay dan ketepatan waktu.
+              Tingkat delay dan menit teramati menurut carrier.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
           <button
+            type="button"
+            aria-pressed={metricToggle === 'rate'}
             onClick={() => setMetricToggle('rate')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
               metricToggle === 'rate' ? 'bg-cyan-400 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
@@ -144,6 +172,8 @@ export const CarrierPanel: React.FC = () => {
             % Tingkat Delay
           </button>
           <button
+            type="button"
+            aria-pressed={metricToggle === 'duration'}
             onClick={() => setMetricToggle('duration')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
               metricToggle === 'duration' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
@@ -159,8 +189,15 @@ export const CarrierPanel: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div>
             <h3 className="text-base font-semibold text-white">
-              Peringkat Maskapai Berdasarkan {metricToggle === 'rate' ? 'Tingkat Delay (%)' : 'Rata-Rata Menit Delay'}
+                Perbandingan Maskapai Berdasarkan {metricToggle === 'rate' ? 'Tingkat Delay (%)' : 'Rata-Rata Menit Delay'}
             </h3>
+            <p className="mt-1 text-[11px] text-slate-400">
+              {metricToggle === 'duration'
+                ? `${carriersWithObservedDuration} dari ${carrierMetrics.length} maskapai memiliki menit delay teramati untuk menghitung rata-rata.`
+                : `${displayedCarriers.length} dari ${carrierMetrics.length} maskapai terlihat; tabel tetap memuat semua maskapai.`}
+              {metricToggle === 'duration' && ' Maskapai lain tetap ada di tabel, tetapi catatan menit delay-nya kosong atau nol sehingga rata-ratanya tidak dapat dihitung.'}
+              {metricToggle === 'rate' && ' Zoom hanya mengubah grafik.'}
+            </p>
             {simulatedMonth && (
               <p className="text-xs text-cyan-400 font-mono mt-0.5">
                 📅 Simulasi Bulan: {MONTH_NAMES_FULL[simulatedMonth - 1]}
@@ -170,7 +207,10 @@ export const CarrierPanel: React.FC = () => {
 
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={() => setIsPlaying(!isPlaying)}
+              aria-pressed={isPlaying}
+              aria-label={isPlaying ? 'Jeda simulasi bulanan maskapai' : 'Putar simulasi bulanan maskapai'}
               className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-mono font-bold flex items-center gap-1.5 hover:bg-cyan-500/30 transition cursor-pointer"
             >
               {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -180,7 +220,9 @@ export const CarrierPanel: React.FC = () => {
             <div className="h-4 w-[1px] bg-slate-800 mx-1" />
 
             <button
+              type="button"
               onClick={() => setZoomLevel((z) => Math.min(z + 0.5, 2.5))}
+              aria-label="Perbesar grafik dan fokus pada peringkat tertinggi"
               className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
               title="Zoom In Top Rank"
             >
@@ -188,7 +230,9 @@ export const CarrierPanel: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => setZoomLevel((z) => Math.max(z - 0.5, 1))}
+              aria-label="Perkecil grafik maskapai"
               className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
               title="Zoom Out"
             >
@@ -196,11 +240,13 @@ export const CarrierPanel: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 setIsPlaying(false);
                 setSimulatedMonth(null);
                 setZoomLevel(1);
               }}
+              aria-label="Reset tampilan grafik maskapai"
               className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 transition cursor-pointer"
               title="Reset Tampilan Utama"
             >
@@ -215,25 +261,28 @@ export const CarrierPanel: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis dataKey="code" stroke="#64748b" fontSize={11} />
               <YAxis stroke="#64748b" fontSize={11} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }} />
-              <Bar dataKey={metricToggle === 'rate' ? 'delayRate' : 'avgDelay'} radius={[4, 4, 0, 0]}>
-                {displayedCarriers.map((entry, index) => (
+              <Tooltip
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                labelFormatter={(code) => getCarrierDisplayName(String(code))}
+              />
+              <Bar dataKey={metricToggle === 'rate' ? 'delayRate' : 'avgDelay'} radius={[5, 5, 0, 0]}>
+                {displayedCarriers.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.delayRate > 22 ? '#ef4444' : entry.delayRate > 18 ? '#f59e0b' : '#06b6d4'}
+                    fill={index === 0 ? '#10b981' : index < 3 ? '#22d3ee' : '#64748b'}
                   />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <InsightCard title="Insight perbandingan maskapai">
+        <InsightCard title="Temuan pada filter ini">
           {highestDelayCarrier && lowestDelayCarrier
-            ? `${highestDelayCarrier.code} mencatat delay rate tertinggi (${highestDelayCarrier.delayRate}%), sementara ${lowestDelayCarrier.code} terendah (${lowestDelayCarrier.delayRate}%) pada cakupan filter ini.`
+            ? `${highestDelayCarrier.name} memiliki rate tertinggi (${highestDelayCarrier.delayRate}%), ${lowestDelayCarrier.name} terendah (${lowestDelayCarrier.delayRate}%). Rata-rata tertimbang jaringan ${overallDelayRate.toFixed(1)}%.`
             : 'Belum ada cukup data maskapai pada cakupan filter ini.'}{' '}
-          Delay rate adalah jumlah penerbangan terlambat dibagi keberangkatan, sedangkan rata-rata menit
-          hanya dihitung di antara penerbangan yang terlambat. Baca kedua metrik bersama volume dan load factor;
-          maskapai dengan sedikit penerbangan lebih mudah berubah peringkatnya.
+          Rate adalah frekuensi, bukan jumlah kasus; volume terbesar ada pada {largestCarrier?.name ?? '—'}
+          {largestCarrier ? ` (${largestCarrier.totalFlights.toLocaleString('id-ID')} keberangkatan)` : ''}.
+          Perbedaan ini mencerminkan skala operasi dan proporsi yang berbeda, bukan sebab keterlambatan.
         </InsightCard>
       </div>
 
@@ -245,6 +294,7 @@ export const CarrierPanel: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
+              aria-label="Cari kode atau nama maskapai"
               placeholder="Cari kode/nama maskapai..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -266,28 +316,43 @@ export const CarrierPanel: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {displayedCarriers.map((c) => (
+              {filteredCarriers.length > 0 ? filteredCarriers.map((c) => (
                 <tr key={c.code} className="hover:bg-slate-800/40 transition">
                   <td className="py-3 px-3 font-semibold text-white flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[11px]">{c.code}</span>
-                    {c.name}
+                    {CARRIER_NAMES[c.code] ?? 'Nama belum tersedia'}
                   </td>
                   <td className="py-3 px-3 text-slate-300">{c.totalFlights.toLocaleString('id-ID')}</td>
                   <td className="py-3 px-3 font-semibold text-rose-400">{c.delayRate}%</td>
-                  <td className="py-3 px-3 text-slate-300">{c.avgDelay} mnt</td>
+                  <td className="py-3 px-3 text-slate-300">
+                    {c.avgDelay == null ? 'Tidak tersedia pada data' : `${c.avgDelay} mnt`}
+                  </td>
                   <td className="py-3 px-3 text-slate-300">{c.loadFactor}%</td>
                   {viewMode === 'analyst' && (
                     <td className="py-3 px-3 text-violet-400 font-semibold">${(c.economicLossUSD / 1000000).toFixed(2)}M</td>
                   )}
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={viewMode === 'analyst' ? 6 : 5} className="p-6 text-center text-slate-400">
+                    Tidak ada maskapai yang cocok dengan pencarian.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-        <InsightCard title="Cara membaca tabel">
+        <InsightCard title="Cakupan nama carrier">
+          CSV memuat {carrierCodes.size} kode carrier; referensi lokal mengenali {namedCarrierCount} di antaranya.
+          Untuk {carrierCodes.size - namedCarrierCount} kode lain, nama operator tidak tersedia pada kolom dataset
+          maupun kamus lokal dan tidak ditebak. Kode carrier dipertahankan sebagaimana tercatat pada sumber;
+          angka pada tabel merupakan agregat bulanan seluruh rute dalam filter aktif.
+        </InsightCard>
+        <InsightCard title="Definisi metrik">
           Total penerbangan adalah agregasi seluruh baris dataset untuk setiap kode maskapai. Load factor =
-          penumpang ÷ kursi; perkiraan kerugian (jika mode analis aktif) mengalikan menit delay dengan asumsi
-          biaya FAA yang ditetapkan aplikasi, sehingga merupakan estimasi model biaya, bukan kerugian akuntansi aktual.
+          penumpang ÷ kursi; tingkat delay membandingkan penerbangan terlambat dengan keberangkatan. Rata-rata menit
+          delay hanya menghitung catatan terlambat dengan menit delay teramati. Estimasi biaya (jika mode analis
+          aktif) mengalikan menit delay dengan asumsi FAA, bukan kerugian akuntansi aktual.
         </InsightCard>
       </div>
     </div>

@@ -11,16 +11,15 @@ import { AirportPanel } from './components/dashboard/AirportPanel';
 import { FactorsPanel } from './components/dashboard/FactorsPanel';
 import { RoutePanel } from './components/dashboard/RoutePanel';
 import { AnalystDataTable } from './components/dashboard/AnalystDataTable';
-import { RelationshipsPanel } from './components/dashboard/RelationshipsPanel';
 import { MethodologyPanel } from './components/dashboard/MethodologyPanel';
+import type { ActiveMenu } from './types/flight';
 
 export default function App() {
   const baseUrl = import.meta.env.BASE_URL;
   const [viewState, setViewState] = useState<'HERO' | 'TRANSITION' | 'DASHBOARD'>('HERO');
   const transitionVideoRef = useRef<HTMLVideoElement>(null);
 
-  const { setRawRows, setAirportCoords, activeMenu, setActiveMenu, setFilter, viewMode } =
-    useFlightStore();
+  const { setRawRows, setAirportCoords, activeMenu, setActiveMenu, viewMode } = useFlightStore();
 
   useEffect(() => {
     loadAllFlightData()
@@ -37,21 +36,8 @@ export default function App() {
       });
   }, [setRawRows, setAirportCoords]);
 
-  // BERPINDAH KE RINGKASAN UTAMA (OVERVIEW) SECARA DEFAULT
-  const handleStartTransition = (targetMenuOrOrigin?: string, dest?: string) => {
-    if (targetMenuOrOrigin === 'ROUTE' || targetMenuOrOrigin === 'route') {
-      setActiveMenu('ROUTE');
-    } else {
-      setActiveMenu('OVERVIEW');
-    }
-
-    if (targetMenuOrOrigin && targetMenuOrOrigin !== 'ROUTE' && targetMenuOrOrigin !== 'OVERVIEW' && targetMenuOrOrigin !== 'overview') {
-      setFilter('origin', targetMenuOrOrigin);
-    }
-    if (dest) {
-      setFilter('destination', dest);
-    }
-
+  const handleStartTransition = (targetMenu: ActiveMenu = 'OVERVIEW') => {
+    setActiveMenu(targetMenu);
     setViewState('TRANSITION');
   };
 
@@ -86,6 +72,7 @@ export default function App() {
   }, [viewState]);
 
   const handleReturnHero = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setViewState('HERO');
   };
 
@@ -113,7 +100,7 @@ export default function App() {
           {/* TEKS BADGE TRANSISI DIPERBARUI */}
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-6 py-2.5 rounded-full bg-slate-950/85 border border-cyan-500/40 text-cyan-400 font-mono text-xs backdrop-blur-md shadow-[0_0_25px_rgba(6,182,212,0.5)] tracking-wider uppercase flex items-center gap-3 pointer-events-none">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-            ✈ Semoga perjalanan anda menyenangkan
+            ✈ Menyiapkan ringkasan kinerja penerbangan
           </div>
         </div>
       )}
@@ -124,7 +111,8 @@ export default function App() {
           <div className="fixed inset-0 z-0 pointer-events-none">
             <img
               src={`${baseUrl}images/bg-plane.png`}
-              alt="Latar Belakang Pesawat"
+              alt=""
+              aria-hidden="true"
               className="w-full h-full object-cover opacity-75"
             />
             <div className="absolute inset-0 bg-slate-950/35 backdrop-brightness-90" />
@@ -133,17 +121,15 @@ export default function App() {
           <div className="relative z-10 flex flex-col min-h-screen">
             <Navbar onReturnHero={handleReturnHero} />
 
-            <div className="flex-1 flex flex-col lg:flex-row w-full max-w-7xl mx-auto pb-12">
+            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col pb-12 md:flex-row">
               <Sidebar />
 
-              <main className="flex-1 p-6 space-y-6 overflow-x-hidden">
-                <div className="px-4 py-2 rounded-xl bg-slate-900/50 border border-slate-800/80 flex items-center justify-between text-xs backdrop-blur-md">
+              <main className="min-w-0 flex-1 space-y-6 overflow-x-hidden p-6">
+                <div className="flex items-center justify-between rounded-xl border border-slate-800/80 bg-slate-900/50 px-4 py-2 text-xs backdrop-blur-md">
                   <span className="text-slate-300">
-                    Mode Tampilan:{' '}
+                    Mode tampilan:{' '}
                     <strong className={viewMode === 'analyst' ? 'text-violet-400' : 'text-cyan-400'}>
-                      {viewMode === 'analyst'
-                        ? 'Mode Analis (Detail Data Granular BTS T-100)'
-                        : 'Mode Eksekutif & Publik (Ringkasan Penumpang)'}
+                      {viewMode === 'analyst' ? 'Analis · data granular' : 'Publik · ringkasan'}
                     </strong>
                   </span>
                 </div>
@@ -154,20 +140,19 @@ export default function App() {
                 {activeMenu === 'AIRPORT' && <AirportPanel />}
                 {activeMenu === 'FACTORS' && <FactorsPanel />}
                 {activeMenu === 'ROUTE' && <RoutePanel />}
-                {activeMenu === 'RELATIONSHIPS' && <RelationshipsPanel />}
                 {activeMenu === 'METHODOLOGY' && <MethodologyPanel />}
 
                 {viewMode === 'analyst' && <AnalystDataTable />}
               </main>
             </div>
 
-            <footer className="fixed bottom-0 inset-x-0 z-50 bg-slate-950/90 border-t border-slate-800/80 px-6 py-2 flex items-center justify-between text-[10px] font-mono text-slate-300 backdrop-blur-xl">
+            <footer className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between border-t border-slate-800/80 bg-slate-950/90 px-6 py-2 font-mono text-[10px] text-slate-300 backdrop-blur-xl">
               <div className="flex items-center gap-2 text-cyan-400">
                 <span>ANALISIS PENERBANGAN</span>
                 <span className="text-slate-600">|</span>
                 <span className="text-slate-300">DATASET ANALISIS BTS / T-100</span>
               </div>
-              <div className="hidden sm:block text-slate-400">
+              <div className="hidden text-slate-400 sm:block">
                 Standar Estimasi Biaya FAA APO-100
               </div>
             </footer>

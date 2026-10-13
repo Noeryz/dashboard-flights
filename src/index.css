@@ -17,15 +17,11 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Background image bg-plane.png & overlay transition */
-.bg-plane-hero {
-  background-image: linear-gradient(to bottom, rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.95)), url('/images/bg-plane.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+::selection {
+  background: rgba(103, 232, 249, 0.28);
+  color: #ecfeff;
 }
 
-/* Glassmorphism Cockpit Card Styles */
 .cockpit-card-cyan {
   background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(16px);
@@ -53,6 +49,38 @@ body {
 .cockpit-card-normal:hover {
   border-color: rgba(6, 182, 212, 0.4);
   box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 video::-webkit-media-controls,

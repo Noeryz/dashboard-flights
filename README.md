@@ -1,75 +1,28 @@
-# React + TypeScript + Vite
+# FlightInsight
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Dashboard analisis deskriptif data penerbangan AS untuk meninjau volume operasi, keterlambatan, pembatalan, kapasitas, maskapai, bandara, dan rute. Visualisasi mengikuti filter tahun, bulan, dan maskapai agar pola dapat dibandingkan pada cakupan data yang sama.
 
-Currently, two official plugins are available:
+## Lingkup analisis
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Deskriptif:** ringkasan metrik dan perbandingan menurut bulan, maskapai, bandara, rute, serta kategori keterlambatan.
+- **Batas interpretasi:** data merupakan agregat bulanan carrier–rute, bukan catatan penerbangan individual. Hasil menunjukkan pola pada data yang tersedia, bukan penyebab keterlambatan atau prediksi kinerja mendatang.
+- **Nama carrier:** CSV menyimpan kode carrier, bukan nama. Dashboard menampilkan nama yang ada pada referensi lokal dan mempertahankan kode lain dengan penanda nama belum tersedia agar tidak menebak identitas. Referensi nama lokal tidak disertai crosswalk resmi bertanggal, sehingga identitas operator perlu dikonfirmasi sebelum dikutip.
 
-## React Compiler
+## Menjalankan aplikasi
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Persyaratan: Node.js dan npm.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Pemeriksaan dan deployment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm run lint
+npm run build
+npm run deploy
 ```
+
+Dataset dan aset statis dibaca dari folder `public/`. Data yang saat ini dipakai berada di `public/data/`.

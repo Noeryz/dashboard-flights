@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { Search, Database, ChevronLeft, ChevronRight } from 'lucide-react';
 import { InsightCard } from './InsightCard';
+import { getCarrierDisplayName } from '../../utils/referenceData';
 
 export const AnalystDataTable: React.FC = () => {
   const { getFilteredRows } = useFlightStore();
@@ -29,10 +30,10 @@ export const AnalystDataTable: React.FC = () => {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-2">
-            <Database className="w-4 h-4 text-violet-400" /> Tabel Rekapitulasi Data Granular FAA (Mode Analis)
+            <Database className="w-4 h-4 text-violet-400" /> Tabel Rekapitulasi Data Granular BTS/T-100 (Mode Analis)
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Menampilkan data penerbangan terpadu langsung dari dataset BTS T-100
+            Menampilkan agregat bulanan carrier–rute dari dataset BTS T-100
           </p>
         </div>
 
@@ -40,6 +41,7 @@ export const AnalystDataTable: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
+            aria-label="Cari maskapai atau bandara"
             placeholder="Cari maskapai / bandara..."
             value={searchTerm}
             onChange={(e) => {
@@ -52,15 +54,15 @@ export const AnalystDataTable: React.FC = () => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left font-mono text-xs">
+        <table className="w-full min-w-[900px] text-left font-mono text-xs">
           <thead>
             <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider bg-slate-950/60">
               <th className="p-3">Tahun/Bulan</th>
               <th className="p-3">Maskapai</th>
               <th className="p-3">Asal</th>
               <th className="p-3">Tujuan</th>
-              <th className="p-3">Passengers</th>
-              <th className="p-3">Flight Volume</th>
+              <th className="p-3">Penumpang</th>
+              <th className="p-3">Keberangkatan</th>
               <th className="p-3">Penerbangan Terlambat</th>
             </tr>
           </thead>
@@ -80,7 +82,9 @@ export const AnalystDataTable: React.FC = () => {
                 return (
                   <tr key={idx} className="hover:bg-violet-500/10 transition-colors">
                     <td className="p-3 text-slate-300">{year} / M{month}</td>
-                    <td className="p-3 font-bold text-violet-400">{carrier}</td>
+                    <td className="p-3 font-bold text-violet-400" title={getCarrierDisplayName(carrier)}>
+                      {carrier} <span className="font-normal text-slate-400">· {getCarrierDisplayName(carrier)}</span>
+                    </td>
                     <td className="p-3 text-cyan-400">{origin}</td>
                     <td className="p-3 text-cyan-300">{dest}</td>
                     <td className="p-3 text-slate-200">{Number(passengers).toLocaleString('id-ID')}</td>
@@ -108,6 +112,8 @@ export const AnalystDataTable: React.FC = () => {
         </span>
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            aria-label="Halaman sebelumnya"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 disabled:opacity-40 hover:border-violet-400 transition-colors cursor-pointer"
@@ -115,6 +121,8 @@ export const AnalystDataTable: React.FC = () => {
             <ChevronLeft className="w-4 h-4 text-violet-300" />
           </button>
           <button
+            type="button"
+            aria-label="Halaman berikutnya"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 disabled:opacity-40 hover:border-violet-400 transition-colors cursor-pointer"
@@ -122,13 +130,13 @@ export const AnalystDataTable: React.FC = () => {
             <ChevronRight className="w-4 h-4 text-violet-300" />
           </button>
         </div>
-        <InsightCard title="Unit analisis dan interpretasi tabel">
-          Satu baris adalah agregat bulanan maskapai–rute, bukan satu penerbangan individual. “Penerbangan
-          terlambat” menunjukkan jumlah agregat yang memiliki keterlambatan kedatangan; angka penumpang dan
-          volume juga merupakan total pada baris tersebut. Karena itu, tabel tidak menyediakan label on-time
-          individual dan tidak dapat dipakai untuk menilai penerbangan tertentu.
-        </InsightCard>
       </div>
+      <InsightCard title="Unit analisis dan interpretasi tabel">
+        Satu baris adalah agregat bulanan maskapai–rute, bukan satu penerbangan individual. “Penerbangan
+        terlambat” menunjukkan jumlah agregat yang memiliki keterlambatan kedatangan; angka penumpang dan
+        volume juga merupakan total pada baris tersebut. Karena itu, tabel tidak menyediakan label on-time
+        individual dan tidak dapat dipakai untuk menilai penerbangan tertentu.
+      </InsightCard>
     </div>
   );
 };

@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
-import { CARRIER_NAMES, FAA_ECONOMIC_CONSTANTS } from '../../utils/referenceData';
+import { CARRIER_NAMES, FAA_ECONOMIC_CONSTANTS, getCarrierDisplayName } from '../../utils/referenceData';
+import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { Building2, Search } from 'lucide-react';
+import { InsightCard } from './InsightCard';
 import {
   ResponsiveContainer,
   BarChart,
@@ -25,7 +27,9 @@ export const AirlinePanel: React.FC = () => {
         code: string;
         name: string;
         totalFlights: number;
+        scheduledFlights: number;
         delayedFlights: number;
+        averageDelayFlights: number;
         cancelledFlights: number;
         weightedArrDelay: number;
         totalDelayMinutes: number;
@@ -43,9 +47,11 @@ export const AirlinePanel: React.FC = () => {
       if (!map[code]) {
         map[code] = {
           code,
-          name: CARRIER_NAMES[code] || code,
+          name: getCarrierDisplayName(code),
           totalFlights: 0,
+          scheduledFlights: 0,
           delayedFlights: 0,
+          averageDelayFlights: 0,
           cancelledFlights: 0,
           weightedArrDelay: 0,
           totalDelayMinutes: 0,
@@ -57,11 +63,14 @@ export const AirlinePanel: React.FC = () => {
       const tf = Number(row.DEPARTURES_PERFORMED) || 0;
       const delayedFlights = Number(row.ARR_DELAY_FLIGHTS) || 0;
       const delayMinutes = Number(row.TOTAL_ARR_DELAY_MINUTES) || 0;
+      const durationObservation = getDelayDurationObservation(row);
 
       map[code].totalFlights += tf;
+      map[code].scheduledFlights += Number(row.SCHEDULED_FLIGHTS) || tf;
       map[code].delayedFlights += delayedFlights;
       map[code].cancelledFlights += Number(row.CANCELLED_FLIGHTS) || 0;
-      map[code].weightedArrDelay += delayMinutes;
+      map[code].weightedArrDelay += durationObservation.delayMinutes;
+      map[code].averageDelayFlights += durationObservation.delayedFlights;
       map[code].totalDelayMinutes += delayMinutes;
       map[code].totalSeats += Number(row.SEATS) || 0;
       map[code].totalPassengers += Number(row.PASSENGERS) || 0;
@@ -70,21 +79,25 @@ export const AirlinePanel: React.FC = () => {
     return Object.values(map)
       .map((item) => {
         const delayRate = item.totalFlights > 0 ? (item.delayedFlights / item.totalFlights) * 100 : 0;
-        const avgDelay = item.delayedFlights > 0 ? item.weightedArrDelay / item.delayedFlights : 0;
-        const cancelRate = item.totalFlights > 0 ? (item.cancelledFlights / item.totalFlights) * 100 : 0;
+        const avgDelay = item.averageDelayFlights > 0
+          ? item.weightedArrDelay / item.averageDelayFlights
+          : null;
+        const cancelRate = item.scheduledFlights > 0 ? (item.cancelledFlights / item.scheduledFlights) * 100 : 0;
         const loadFactor = item.totalSeats > 0 ? (item.totalPassengers / item.totalSeats) * 100 : 0;
         const economicLossUSD = item.totalDelayMinutes * FAA_ECONOMIC_CONSTANTS.TOTAL_COST_PER_MIN_USD;
 
         return {
           ...item,
           delayRate: Number(delayRate.toFixed(1)),
-          avgDelay: Number(avgDelay.toFixed(1)),
+          avgDelay: avgDelay == null ? null : Number(avgDelay.toFixed(1)),
           cancelRate: Number(cancelRate.toFixed(2)),
           loadFactor: Number(loadFactor.toFixed(1)),
           economicLossUSD: Math.round(economicLossUSD),
         };
       })
-      .sort((a, b) => (metricToggle === 'rate' ? b.delayRate - a.delayRate : b.avgDelay - a.avgDelay));
+      .sort((a, b) => metricToggle === 'rate'
+        ? b.delayRate - a.delayRate
+        : (b.avgDelay ?? -1) - (a.avgDelay ?? -1));
   }, [rawRows, filters, metricToggle]);
 
   const filteredCarriers = useMemo(() => {
@@ -94,6 +107,19 @@ export const AirlinePanel: React.FC = () => {
         c.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [carrierMetrics, searchTerm]);
+  const totalFlights = carrierMetrics.reduce((sum, carrier) => sum + carrier.totalFlights, 0);
+  const totalDelayedFlights = carrierMetrics.reduce((sum, carrier) => sum + carrier.delayedFlights, 0);
+  const networkDelayRate = totalFlights > 0 ? (totalDelayedFlights / totalFlights) * 100 : 0;
+  const highestDelayCarrier = carrierMetrics.reduce<(typeof carrierMetrics)[number] | null>(
+    (highest, carrier) => !highest || carrier.delayRate > highest.delayRate ? carrier : highest,
+    null,
+  );
+  const largestCarrier = carrierMetrics.reduce<(typeof carrierMetrics)[number] | null>(
+    (largest, carrier) => !largest || carrier.totalFlights > largest.totalFlights ? carrier : largest,
+    null,
+  );
+  const carrierCodes = new Set(rawRows.map((row) => String(row.UNIQUE_CARRIER || '').trim()).filter(Boolean));
+  const namedCarrierCount = Array.from(carrierCodes).filter((code) => CARRIER_NAMES[code]).length;
 
   return (
     <div className="space-y-6">
@@ -103,15 +129,17 @@ export const AirlinePanel: React.FC = () => {
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Performa & Peringkat Maskapai</h2>
+            <h2 className="text-xl font-bold text-white">Perbandingan Kinerja Maskapai</h2>
             <p className="text-slate-400 text-xs">
-              Evaluasi keandalan operasional 15 maskapai domestik AS berdasarkan standar FAA.
+              Bandingkan frekuensi keterlambatan, durasi rata-rata, dan volume penerbangan maskapai pada filter aktif.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
           <button
+            type="button"
+            aria-pressed={metricToggle === 'rate'}
             onClick={() => setMetricToggle('rate')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               metricToggle === 'rate'
@@ -119,9 +147,11 @@ export const AirlinePanel: React.FC = () => {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            % Keterlambatan (&gt;15m)
+            % Keterlambatan
           </button>
           <button
+            type="button"
+            aria-pressed={metricToggle === 'duration'}
             onClick={() => setMetricToggle('duration')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               metricToggle === 'duration'
@@ -134,9 +164,22 @@ export const AirlinePanel: React.FC = () => {
         </div>
       </div>
 
+      <InsightCard title="Apa yang menonjol pada perbandingan ini?">
+        {highestDelayCarrier && largestCarrier
+          ? <>
+              Pada filter ini, {highestDelayCarrier.name} memiliki tingkat keterlambatan tertinggi (
+              {highestDelayCarrier.delayRate}%) dibanding rata-rata tertimbang seluruh maskapai (
+              {networkDelayRate.toFixed(1)}%), sementara volume terbesar tercatat pada {largestCarrier.name} (
+              {largestCarrier.totalFlights.toLocaleString('id-ID')} keberangkatan). Tingkat keterlambatan
+              menunjukkan seberapa sering penerbangan terlambat, sedangkan durasi rata-rata hanya dihitung
+              pada penerbangan yang terlambat. Perbedaan skala operasi dan periode turut memengaruhi perbandingan.
+            </>
+          : 'Data maskapai belum tersedia pada filter ini.'}
+      </InsightCard>
+
       <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
         <h3 className="text-base font-semibold text-white mb-4">
-          Peringkat Maskapai Berdasarkan {metricToggle === 'rate' ? 'Tingkat Delay (%)' : 'Rata-Rata Menit Delay'}
+          Perbandingan Maskapai Berdasarkan {metricToggle === 'rate' ? 'Tingkat Keterlambatan (%)' : 'Durasi Rata-Rata Keterlambatan'}
         </h3>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -152,16 +195,10 @@ export const AirlinePanel: React.FC = () => {
                 name={metricToggle === 'rate' ? 'Delay Rate (%)' : 'Avg Delay (Mnt)'}
                 radius={[4, 4, 0, 0]}
               >
-                {carrierMetrics.map((entry, index) => (
+                {carrierMetrics.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={
-                      entry.delayRate > 22
-                        ? '#ef4444'
-                        : entry.delayRate > 18
-                        ? '#f59e0b'
-                        : '#06b6d4'
-                    }
+                    fill="#06b6d4"
                   />
                 ))}
               </Bar>
@@ -177,6 +214,7 @@ export const AirlinePanel: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
+              aria-label="Cari kode atau nama maskapai"
               placeholder="Cari kode/nama maskapai..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -189,7 +227,7 @@ export const AirlinePanel: React.FC = () => {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-800 text-slate-400">
-                <th className="py-3 px-3">Kode & Nama Maskapai</th>
+                <th className="py-3 px-3">Kode & Nama dalam Referensi</th>
                 <th className="py-3 px-3">Total Penerbangan</th>
                 <th className="py-3 px-3">% Delay</th>
                 <th className="py-3 px-3">Avg Delay</th>
@@ -213,19 +251,13 @@ export const AirlinePanel: React.FC = () => {
                   </td>
                   <td className="py-3 px-3 text-slate-300">{(c.totalFlights / 1000).toFixed(1)}k</td>
                   <td className="py-3 px-3">
-                    <span
-                      className={`font-semibold ${
-                        c.delayRate > 22
-                          ? 'text-flight-coral'
-                          : c.delayRate > 18
-                          ? 'text-flight-amber'
-                          : 'text-emerald-400'
-                      }`}
-                    >
+                    <span className="font-semibold text-slate-300">
                       {c.delayRate}%
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-slate-300">{c.avgDelay} mnt</td>
+                  <td className="py-3 px-3 text-slate-300">
+                    {c.avgDelay == null ? 'Tidak ada penerbangan terlambat' : `${c.avgDelay} mnt`}
+                  </td>
                   <td className="py-3 px-3 text-slate-300">{c.loadFactor}%</td>
                   {viewMode === 'analyst' && (
                     <>
@@ -240,6 +272,12 @@ export const AirlinePanel: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <InsightCard title="Cakupan nama carrier">
+          CSV memuat {carrierCodes.size} kode carrier; referensi lokal mengenali {namedCarrierCount} di antaranya.
+          Untuk {carrierCodes.size - namedCarrierCount} kode lain, nama operator tidak tersedia pada kolom dataset
+          maupun kamus lokal dan tidak ditebak. Setiap nilai merupakan agregat bulanan per kode carrier dan rute.
+          Estimasi biaya pada mode analis memakai asumsi FAA, bukan kerugian aktual yang tercatat.
+        </InsightCard>
       </div>
     </div>
   );

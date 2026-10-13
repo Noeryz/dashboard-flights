@@ -44,7 +44,7 @@ export const FactorsPanel: React.FC = () => {
     });
 
     const items = [
-      { factor: 'Rotasi Pesawat (Late Aircraft)', minutes: Math.round(lateAircraftMin), color: '#06b6d4' },
+      { factor: 'Keterlambatan lanjutan pesawat (Late-arriving aircraft)', minutes: Math.round(lateAircraftMin), color: '#06b6d4' },
       { factor: 'Sistem Navigasi Udara (NAS)', minutes: Math.round(nasMin), color: '#8b5cf6' },
       { factor: 'Internal Maskapai (Carrier)', minutes: Math.round(carrierMin), color: '#f59e0b' },
       { factor: 'Cuaca Buruk (Weather)', minutes: Math.round(weatherMin), color: '#f43f5e' },
@@ -58,6 +58,8 @@ export const FactorsPanel: React.FC = () => {
     : factorsData;
   const totalDelayMinutes = factorsData.reduce((total, factor) => total + factor.minutes, 0);
   const leadingFactor = [...factorsData].sort((a, b) => b.minutes - a.minutes)[0];
+  const secondFactor = [...factorsData].sort((a, b) => b.minutes - a.minutes)[1];
+  const leadingShare = totalDelayMinutes > 0 ? (leadingFactor.minutes / totalDelayMinutes) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -68,12 +70,18 @@ export const FactorsPanel: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white uppercase font-mono tracking-wider">
-              Analisis Faktor Keterlambatan Penerbangan
+              Kategori Keterlambatan Penerbangan
             </h2>
-            <p className="text-xs text-slate-300">Dekomposisi total menit delay berdasarkan standar kategori BTS & FAA</p>
+            <p className="text-xs text-slate-300">Akumulasi menit pada lima kategori laporan</p>
           </div>
         </div>
       </div>
+
+      <InsightCard title="Late-arriving aircraft">
+        Pesawat tiba terlambat dari penerbangan sebelumnya, lalu delay terbawa ke keberangkatan berikutnya.
+        Ini menjelaskan <strong>delay yang merambat</strong>, bukan penyebab awalnya—data agregat tidak melacak pesawat
+        antar-penerbangan.
+      </InsightCard>
 
       <div className="p-6 rounded-3xl cockpit-card-normal space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -88,7 +96,10 @@ export const FactorsPanel: React.FC = () => {
 
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={() => setIsPlaying(!isPlaying)}
+              aria-pressed={isPlaying}
+              aria-label={isPlaying ? 'Jeda simulasi bulanan' : 'Putar simulasi bulanan'}
               className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer"
             >
               {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -96,7 +107,9 @@ export const FactorsPanel: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => setZoomScale(2)}
+              aria-label="Tampilkan tiga kategori dengan menit terbanyak"
               className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 cursor-pointer"
               title="Zoom 3 Faktor Terbesar"
             >
@@ -104,11 +117,13 @@ export const FactorsPanel: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 setIsPlaying(false);
                 setSimulatedMonth(null);
                 setZoomScale(1);
               }}
+              aria-label="Reset tampilan kategori keterlambatan"
               className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 cursor-pointer"
               title="Reset Zoom"
             >
@@ -135,13 +150,18 @@ export const FactorsPanel: React.FC = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <InsightCard title="Insight penyebab keterlambatan">
+        <InsightCard title="Porsi menit delay">
           {leadingFactor && totalDelayMinutes > 0
-            ? `${leadingFactor.factor} merupakan kontributor terbesar pada filter ini, sebesar ${leadingFactor.minutes.toLocaleString('id-ID')} menit (${((leadingFactor.minutes / totalDelayMinutes) * 100).toFixed(1)}% dari total lima kategori).`
+            ? `${leadingFactor.factor} menjadi kontributor menit terbesar pada filter ini: ${leadingFactor.minutes.toLocaleString('id-ID')} menit atau ${leadingShare.toFixed(1)}% dari total yang diklasifikasikan.`
             : 'Belum ada menit keterlambatan yang tercatat pada filter ini.'}{' '}
-          Nilai adalah akumulasi menit delay yang dilaporkan per kategori, bukan jumlah kejadian. Kategori bisa
-          menunjukkan bagian dari sistem yang mencatat keterlambatan; asosiasi kategori tidak membuktikan penyebab
-          tunggal atau hubungan kausal.
+          Ini porsi durasi tercatat, bukan jumlah kejadian; selisih dapat mencerminkan frekuensi maupun lamanya delay.{' '}
+          {leadingFactor && totalDelayMinutes > 0 && (
+            <>
+              {secondFactor && <> Berikutnya, {secondFactor.factor} mencatat{' '}
+                {((secondFactor.minutes / totalDelayMinutes) * 100).toFixed(1)}%.</>}
+              {' '}Data agregat tidak memastikan penyebab awal.
+            </>
+          )}
         </InsightCard>
       </div>
     </div>

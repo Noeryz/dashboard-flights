@@ -41,7 +41,7 @@ export const DelayFactorPanel: React.FC = () => {
     const totalMinutes = lateAircraft + carrier + nas + weather + security;
 
     const items = [
-      { name: 'Late Aircraft (Rotasi Pesawat)', minutes: Math.round(lateAircraft), icon: PlaneTakeoff, color: '#f59e0b' },
+      { name: 'Keterlambatan lanjutan pesawat (Late-arriving aircraft)', minutes: Math.round(lateAircraft), icon: PlaneTakeoff, color: '#f59e0b' },
       { name: 'Carrier (Internal Maskapai)', minutes: Math.round(carrier), icon: Building2, color: '#06b6d4' },
       { name: 'NAS (Sistem Navigasi Udara)', minutes: Math.round(nas), icon: Clock, color: '#8b5cf6' },
       { name: 'Weather (Cuaca Buruk)', minutes: Math.round(weather), icon: CloudRain, color: '#ef4444' },
@@ -72,9 +72,9 @@ export const DelayFactorPanel: React.FC = () => {
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Faktor Penyebab Keterlambatan</h2>
+            <h2 className="text-xl font-bold text-white">Kategori Keterlambatan yang Tercatat</h2>
             <p className="text-slate-400 text-xs">
-              Dekomposisi 5 akar penyebab akumulasi menit keterlambatan nasional berdasarkan klasifikasi BTS/FAA.
+              Perbandingan akumulasi menit pada lima kategori keterlambatan dalam filter aktif.
             </p>
           </div>
         </div>
@@ -90,10 +90,10 @@ export const DelayFactorPanel: React.FC = () => {
       {/* Domino Effect Explainer Box */}
       <div className="p-5 rounded-2xl bg-slate-900/80 border border-flight-amber/30 bg-gradient-to-r from-flight-amber/10 via-transparent to-transparent space-y-2">
         <h3 className="text-sm font-bold text-flight-amber flex items-center gap-2">
-          💡 Mengapa Late Aircraft Delay Menjadi Penyebab Terbesar (#1)?
+          💡 Makna kategori Late-arriving aircraft
         </h3>
         <p className="text-xs text-slate-300 leading-relaxed">
-          Satu pesawat komersial umumnya melayani 4–6 leg penerbangan dalam sehari. Ketika penerbangan pertama terlambat akibat cuaca atau kendala navigasi, penerbangan berikutnya secara otomatis berangkat terlambat karena menunggu kedatangan armada. Penundaan berantai ini dicatat oleh BTS sebagai <strong>Late Aircraft Delay</strong> (efek domino rotasi pesawat).
+          Kategori ini digunakan ketika pesawat yang akan menjalankan penerbangan berikutnya tiba terlambat dari penerbangan sebelumnya, sehingga keterlambatan terbawa ke jadwal berikutnya. Ini menjelaskan mekanisme penularan delay, bukan penyebab awal pesawat sebelumnya terlambat. CSV agregat tidak memuat identitas pesawat atau urutan penerbangan untuk menelusuri kejadian individual.
         </p>
       </div>
 
@@ -101,7 +101,7 @@ export const DelayFactorPanel: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pie Chart Proporsi Menit */}
         <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md flex flex-col justify-between">
-          <h3 className="text-base font-semibold text-white mb-2">Proporsi Penyebab Delay (%)</h3>
+          <h3 className="text-base font-semibold text-white mb-2">Proporsi Menit per Kategori Delay (%)</h3>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

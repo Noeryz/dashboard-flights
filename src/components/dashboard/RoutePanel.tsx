@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useFlightStore } from '../../store/useFlightStore';
+import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import {
   MapPin,
   Play,
@@ -266,6 +267,17 @@ export const RoutePanel: React.FC = () => {
   );
 
   const routeStats = useMemo(() => {
+    const networkTotals = filteredRows.reduce(
+      (totals, row) => {
+        totals.departures += Number(row.DEPARTURES_PERFORMED || 0);
+        totals.delayed += Number(row.ARR_DELAY_FLIGHTS || 0);
+        return totals;
+      },
+      { departures: 0, delayed: 0 },
+    );
+    const networkDelayRate = networkTotals.departures > 0
+      ? (networkTotals.delayed / networkTotals.departures) * 100
+      : 0;
     const matchingRows = filteredRows.filter((r) => {
       const origCode = String(r.ORIGIN || '').trim().toUpperCase();
       const destCode = String(r.DEST || '').trim().toUpperCase();
@@ -277,6 +289,7 @@ export const RoutePanel: React.FC = () => {
     let totalSeats = 0;
     let delayedFlights = 0;
     let delayMinutesSum = 0;
+    let averageDelayFlights = 0;
     let distanceMilesTotal = 0;
     let distanceFlights = 0;
     const carrierCountMap: Record<string, number> = {};
@@ -287,14 +300,15 @@ export const RoutePanel: React.FC = () => {
         const pax = Number(r.PASSENGERS || 0);
         const seats = Number(r.SEATS || 0);
         const delayed = Number(r.ARR_DELAY_FLIGHTS || 0);
-        const delayMinutes = Number(r.TOTAL_ARR_DELAY_MINUTES || 0);
+        const durationObservation = getDelayDurationObservation(r);
         const carrier = r.UNIQUE_CARRIER || 'Unknown';
 
         totalFlights += flights;
         totalPassengers += pax;
         totalSeats += seats;
         delayedFlights += delayed;
-        delayMinutesSum += delayMinutes;
+        delayMinutesSum += durationObservation.delayMinutes;
+        averageDelayFlights += durationObservation.delayedFlights;
         const distanceMiles = Number(r.DISTANCE);
         if (Number.isFinite(distanceMiles) && distanceMiles > 0) {
           distanceMilesTotal += distanceMiles * flights;
@@ -309,7 +323,9 @@ export const RoutePanel: React.FC = () => {
     const delayRatePct = totalFlights > 0 ? Number(((delayedFlights / totalFlights) * 100).toFixed(1)) : 0;
     const onTimeRatePct = Number((100 - delayRatePct).toFixed(1));
 
-    const avgDelayMinutes = delayedFlights > 0 ? Math.round(delayMinutesSum / delayedFlights) : 0;
+    const avgDelayMinutes = averageDelayFlights > 0
+      ? Math.round(delayMinutesSum / averageDelayFlights)
+      : null;
 
     let topCarrier = '—';
     let maxCarrierCount = 0;
@@ -323,25 +339,25 @@ export const RoutePanel: React.FC = () => {
     const displayFlights = totalFlights;
     const displayPassengers = totalPassengers;
 
-    let delayStatusText = matchingRows.length === 0 ? 'TIDAK ADA DATA' : 'DELAY RENDAH';
+    let delayStatusText = matchingRows.length === 0 ? 'TIDAK ADA DATA' : 'DI BAWAH 14%';
     let delayStatusBadgeClass = matchingRows.length === 0
       ? 'bg-slate-500/10 border-slate-400/40 text-slate-400'
       : 'bg-emerald-500/10 border-emerald-400/40 text-emerald-400';
     let delayStatusIcon = CheckCircle2;
     let insightSummary = matchingRows.length === 0
-      ? `Tidak ada catatan untuk rute ${origin}–${destination} pada filter aktif. Pilih pasangan yang tersedia di data.`
-      : `Rute ${origin}–${destination} memiliki delay rate ${delayRatePct}% dari ${totalFlights.toLocaleString('id-ID')} keberangkatan. Ini merupakan ringkasan historis agregat, bukan prediksi jadwal berikutnya.`;
+      ? `Tidak ada catatan untuk rute ${origin}–${destination} pada filter aktif, sehingga metrik rute tidak dapat dibandingkan.`
+      : `Pada data terpilih, ${delayRatePct}% keberangkatan rute ${origin}–${destination} tercatat terlambat, dibanding ${networkDelayRate.toFixed(1)}% pada seluruh rute. Rata-rata ${avgDelayMinutes ?? 'tidak tersedia'} menit dihitung dari catatan yang memiliki jumlah penerbangan terlambat dan total menit delay positif. Selisih ini menggambarkan perbedaan frekuensi dan durasi, bukan penyebabnya.`;
 
     if (delayRatePct > 20) {
-      delayStatusText = 'POTENSI DELAY TINGGI';
+      delayStatusText = 'DI ATAS 20%';
       delayStatusBadgeClass = 'bg-rose-500/10 border-rose-400/40 text-rose-400';
       delayStatusIcon = AlertTriangle;
-      insightSummary = `Delay rate rute ${origin}–${destination} berada di atas 20% pada filter aktif. Periksa volume dan periode sebelum membandingkan; dataset tidak memiliki waktu keberangkatan untuk merekomendasikan jam tertentu.`;
+      insightSummary = `Pada cakupan ini, delay rate rute ${origin}–${destination} melampaui 20% dan ${delayRatePct > networkDelayRate ? 'berada di atas' : 'tidak melampaui'} rata-rata seluruh rute (${networkDelayRate.toFixed(1)}%). Ini menunjukkan frekuensi keterlambatan relatif tinggi menurut ambang tampilan, bukan membuktikan penyebab. Data tidak memuat waktu keberangkatan untuk membandingkan jam tertentu.`;
     } else if (delayRatePct > 14) {
-      delayStatusText = 'DELAY MODERAT';
+      delayStatusText = '14–20%';
       delayStatusBadgeClass = 'bg-amber-500/10 border-amber-400/40 text-amber-400';
       delayStatusIcon = AlertTriangle;
-      insightSummary = `Delay rate rute ${origin}–${destination} berada pada rentang 14–20% pada filter aktif; bandingkan bersama volume dan load factor, bukan sebagai bukti sebab-akibat.`;
+      insightSummary = `Pada cakupan ini, delay rate rute ${origin}–${destination} berada pada rentang 14–20%, dibanding ${networkDelayRate.toFixed(1)}% pada seluruh rute. Rentang tersebut adalah penanda tampilan, bukan standar risiko universal; perbedaan volume juga memengaruhi kestabilan persentase.`;
     }
 
     return {
@@ -643,6 +659,7 @@ export const RoutePanel: React.FC = () => {
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <span className="text-[10px] font-mono text-slate-400 uppercase">Kota Asal:</span>
               <select
+                aria-label="Pilih kota asal"
                 value={selectedOriginCity}
                 onChange={(e) => {
                   const city = e.target.value;
@@ -677,6 +694,7 @@ export const RoutePanel: React.FC = () => {
               <Search className="w-3.5 h-3.5 text-slate-400" />
               <input
                 type="text"
+                aria-label="Cari nama bandara asal"
                 value={originSearch}
                 onChange={(e) => setOriginSearch(e.target.value)}
                 placeholder="Cari nama asli bandara asal..."
@@ -687,6 +705,7 @@ export const RoutePanel: React.FC = () => {
             <div className="space-y-1">
               <label className="text-[10px] font-mono text-slate-400 block">Pilih Nama Resmi Bandara Asal:</label>
               <select
+                aria-label="Pilih bandara asal"
                 value={origin}
                 onChange={(e) => {
                   if (e.target.value !== destination) {
@@ -719,6 +738,7 @@ export const RoutePanel: React.FC = () => {
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <span className="text-[10px] font-mono text-slate-400 uppercase">Kota Tujuan:</span>
               <select
+                aria-label="Pilih kota tujuan"
                 value={selectedDestCity}
                 onChange={(e) => {
                   const city = e.target.value;
@@ -748,6 +768,7 @@ export const RoutePanel: React.FC = () => {
               <Search className="w-3.5 h-3.5 text-slate-400" />
               <input
                 type="text"
+                aria-label="Cari nama bandara tujuan"
                 value={destSearch}
                 onChange={(e) => setDestSearch(e.target.value)}
                 placeholder="Cari nama asli bandara tujuan..."
@@ -758,6 +779,7 @@ export const RoutePanel: React.FC = () => {
             <div className="space-y-1">
               <label className="text-[10px] font-mono text-slate-400 block">Pilih Nama Resmi Bandara Tujuan:</label>
               <select
+                aria-label="Pilih bandara tujuan"
                 value={destination}
                 onChange={(e) => {
                   if (e.target.value !== origin) {
@@ -796,6 +818,8 @@ export const RoutePanel: React.FC = () => {
       <div className="p-4 rounded-3xl cockpit-card-normal flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center bg-slate-950/90 p-1 rounded-2xl border border-slate-800">
           <button
+            type="button"
+            aria-pressed={mapType === 'dark'}
             onClick={() => setMapType('dark')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'dark'
@@ -807,6 +831,8 @@ export const RoutePanel: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            aria-pressed={mapType === 'satellite'}
             onClick={() => setMapType('satellite')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'satellite'
@@ -818,6 +844,8 @@ export const RoutePanel: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            aria-pressed={mapType === 'streets'}
             onClick={() => setMapType('streets')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'streets'
@@ -829,6 +857,8 @@ export const RoutePanel: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            aria-pressed={mapType === 'terrain'}
             onClick={() => setMapType('terrain')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
               mapType === 'terrain'
@@ -845,6 +875,8 @@ export const RoutePanel: React.FC = () => {
             {[1, 2, 4].map((spd) => (
               <button
                 key={spd}
+                type="button"
+                aria-pressed={simSpeed === spd}
                 onClick={() => setSimSpeed(spd)}
                 className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition cursor-pointer ${
                   simSpeed === spd
@@ -858,6 +890,8 @@ export const RoutePanel: React.FC = () => {
           </div>
 
           <button
+            type="button"
+            aria-pressed={isPlaying}
             onClick={() => setIsPlaying(!isPlaying)}
             className="px-3.5 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-mono font-bold flex items-center gap-2 hover:bg-cyan-500/30 transition cursor-pointer"
           >
@@ -947,7 +981,7 @@ export const RoutePanel: React.FC = () => {
           <div className="p-6 rounded-3xl cockpit-card-cyan space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <h3 className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-cyan-400" /> Analytics & Insight Rute
+                <BarChart2 className="w-4 h-4 text-cyan-400" /> Analisis Kinerja Rute
               </h3>
               <div className={`px-2.5 py-1 rounded-full border text-[10px] font-mono font-bold flex items-center gap-1 ${routeStats.delayStatusBadgeClass}`}>
                 <StatusIconComponent className="w-3 h-3" />
@@ -989,7 +1023,7 @@ export const RoutePanel: React.FC = () => {
 
               <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-400 uppercase flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-emerald-400" /> On-Time Rate
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" /> Indikator Bebas Delay
                 </span>
                 <div className="text-lg font-bold text-emerald-400">
                   {routeStats.onTimeRatePct}%
@@ -997,20 +1031,23 @@ export const RoutePanel: React.FC = () => {
                 <div className="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden mt-1">
                   <div className="h-full bg-emerald-400" style={{ width: `${routeStats.onTimeRatePct}%` }} />
                 </div>
-                <span className="text-[9px] text-slate-300 block pt-0.5">Bebas Delay (&lt;15m)</span>
+                <span className="text-[9px] text-slate-300 block pt-0.5">100% dikurangi delay rate</span>
               </div>
             </div>
 
             <div className="space-y-2.5 font-mono text-xs">
               <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex justify-between items-center">
-                <span className="text-slate-400">Risiko Keterlambatan:</span>
+                <span className="text-slate-400">Tingkat Keterlambatan:</span>
                 <span className="font-bold text-amber-400">{routeStats.delayRatePct}% Penerbangan</span>
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex justify-between items-center">
                 <span className="text-slate-400">Rata-rata Menit Delay:</span>
                 <span className="font-bold text-rose-300 flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> ± {routeStats.avgDelayMinutes} Menit
+                  <Clock className="w-3 h-3" />{' '}
+                  {routeStats.avgDelayMinutes == null
+                    ? 'Tidak tersedia'
+                    : `± ${routeStats.avgDelayMinutes} menit`}
                 </span>
               </div>
 
@@ -1039,7 +1076,7 @@ export const RoutePanel: React.FC = () => {
 
             <div className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 text-[11px] leading-relaxed text-slate-300 font-sans">
               <strong className="text-cyan-300 font-mono block mb-1 flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5 text-cyan-400" /> Ringkasan Insight Analis:
+                <TrendingUp className="w-3.5 h-3.5 text-cyan-400" /> Perbandingan dengan seluruh rute:
               </strong>
               {routeStats.insightSummary}
             </div>

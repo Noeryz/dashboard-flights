@@ -34,7 +34,7 @@ export const STATE_POPULATION_2024: Record<string, { popMillions: number; name: 
   HI: { popMillions: 1.4, name: 'Hawaii' },
 };
 
-// Pemetaan Kode Maskapai Resmi
+// Referensi lokal nama carrier; kode yang tidak dikenal tetap ditampilkan apa adanya.
 export const CARRIER_NAMES: Record<string, string> = {
   WN: 'Southwest Airlines (WN)',
   DL: 'Delta Air Lines (DL)',
@@ -51,7 +51,34 @@ export const CARRIER_NAMES: Record<string, string> = {
   NK: 'Spirit Airlines (NK)',
   OO: 'SkyWest Airlines (OO)',
   HA: 'Hawaiian Airlines (HA)',
+  '3M': 'Silver Airways (3M)',
+  '4B': 'Boutique Air (4B)',
+  '4W': "Warbelow's Air Ventures (4W)",
+  '5V': 'Everts Air (5V)',
+  '7H': 'Ravn Alaska (7H)',
+  '7S': 'Ryan Air (7S)',
+  '8E': 'Bering Air (8E)',
+  '8V': 'Wright Air Service (8V)',
+  '9K': 'Cape Air (9K)',
+  '9X': 'Southern Airways Express (9X)',
+  C5: 'CommuteAir (C5)',
+  G7: 'GoJet Airlines (G7)',
+  GV: 'Grant Aviation (GV)',
+  KG: 'Key Lime Air (KG)',
+  LF: 'Contour Airlines (LF)',
+  MX: 'Breeze Airways (MX)',
+  PT: 'Piedmont Airlines (PT)',
+  Q5: '40-Mile Air (Q5)',
+  QX: 'Horizon Air (QX)',
+  SY: 'Sun Country Airlines (SY)',
+  TJ: 'Tradewind Aviation (TJ)',
+  XP: 'Avelo Airlines (XP)',
+  YV: 'Mesa Airlines (YV)',
+  ZW: 'Air Wisconsin (ZW)',
 };
+
+export const getCarrierDisplayName = (code: string): string =>
+  CARRIER_NAMES[code] ?? `Carrier ${code} (nama belum tersedia)`;
 
 // Kamus Nama Resmi Bandara Utama AS
 export const US_AIRPORT_NAMES: Record<string, string> = {

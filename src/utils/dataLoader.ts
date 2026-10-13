@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import type { RawFlightRow, AirportCoord, DynamicKPIs } from '../types/flight';
+import { getDelayDurationObservation } from './flightAnalytics';
 
 export const loadAllFlightData = (): Promise<{
   rows: RawFlightRow[];
@@ -56,7 +57,7 @@ export const calculateNationalKPIs = (data: RawFlightRow[]): DynamicKPIs => {
       totalFlights: 0,
       totalPassengers: 0,
       delayRate: 0,
-      avgDelayMinutes: 0,
+      avgDelayMinutes: null,
       cancelRate: 0,
       seatLoadFactor: 0,
       otpRate: 0,
@@ -71,6 +72,8 @@ export const calculateNationalKPIs = (data: RawFlightRow[]): DynamicKPIs => {
   let totalCancelled = 0;
   let totalDelayed = 0;
   let totalDelayMinutesSum = 0;
+  let observedDelayedFlights = 0;
+  let observedDelayMinutesSum = 0;
 
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
@@ -84,12 +87,17 @@ export const calculateNationalKPIs = (data: RawFlightRow[]): DynamicKPIs => {
     totalCancelled += Number(row.CANCELLED_FLIGHTS || 0);
     totalDelayed += Number(row.ARR_DELAY_FLIGHTS || 0);
     totalDelayMinutesSum += Number(row.TOTAL_ARR_DELAY_MINUTES || 0);
+    const durationObservation = getDelayDurationObservation(row);
+    observedDelayedFlights += durationObservation.delayedFlights;
+    observedDelayMinutesSum += durationObservation.delayMinutes;
   }
 
   const delayRate = totalFlights > 0 ? (totalDelayed / totalFlights) * 100 : 0;
   const cancelRate = totalScheduled > 0 ? (totalCancelled / totalScheduled) * 100 : 0;
   const seatLoadFactor = totalSeats > 0 ? Math.min(100, (totalPassengers / totalSeats) * 100) : 0;
-  const avgDelayMinutes = totalDelayed > 0 ? totalDelayMinutesSum / totalDelayed : 0;
+  const avgDelayMinutes = observedDelayedFlights > 0
+    ? observedDelayMinutesSum / observedDelayedFlights
+    : null;
   const otpRate = Math.max(0, 100 - delayRate);
   const totalEconomicCostUSD = totalDelayMinutesSum * 111.68;
 
@@ -97,7 +105,7 @@ export const calculateNationalKPIs = (data: RawFlightRow[]): DynamicKPIs => {
     totalFlights: Math.round(totalFlights),
     totalPassengers: Math.round(totalPassengers),
     delayRate: Number(delayRate.toFixed(2)),
-    avgDelayMinutes: Number(avgDelayMinutes.toFixed(2)),
+    avgDelayMinutes: avgDelayMinutes == null ? null : Number(avgDelayMinutes.toFixed(2)),
     cancelRate: Number(cancelRate.toFixed(2)),
     seatLoadFactor: Number(seatLoadFactor.toFixed(2)),
     otpRate: Number(otpRate.toFixed(2)),

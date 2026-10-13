@@ -5,7 +5,6 @@ export type ActiveMenu =
   | 'ROUTE'
   | 'AIRPORT'
   | 'FACTORS'
-  | 'RELATIONSHIPS'
   | 'METHODOLOGY';
 export type ViewMode = 'public' | 'analyst';
 
@@ -60,7 +59,7 @@ export interface DynamicKPIs {
   totalFlights: number;
   totalPassengers: number;
   delayRate: number;
-  avgDelayMinutes: number;
+  avgDelayMinutes: number | null;
   cancelRate: number;
   seatLoadFactor: number;
   otpRate: number;
