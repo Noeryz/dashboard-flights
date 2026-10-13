@@ -195,7 +195,7 @@ export const OverviewPanel: React.FC = () => {
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wide text-cyan-200">Problem Statement</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Bagaimana distribusi performa ketepatan waktu (delay) dan volume operasi antar maskapai, bandara, dan periode waktu (bulanan/harian), serta apa faktor dominan penyebab delay tersebut?
+              Bagaimana distribusi ketepatan waktu (delay) dan volume operasi antar maskapai, bandara, dan bulan, serta kategori keterlambatan mana yang mencatat menit delay terbanyak?
             </p>
           </div>
         </div>

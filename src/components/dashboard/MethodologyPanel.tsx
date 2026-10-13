@@ -121,7 +121,7 @@ export const MethodologyPanel: React.FC = () => {
         <FieldGroup
           title="Kategori delay"
           fields="CARRIER_DELAY_MINUTES · WEATHER_DELAY_MINUTES · NAS_DELAY_MINUTES · SECURITY_DELAY_MINUTES · LATE_AIRCRAFT_DELAY_MINUTES"
-          purpose="Data membagi menit keterlambatan ke lima kategori. Late-arriving aircraft berarti keterlambatan dari penerbangan sebelumnya terbawa ke penerbangan berikutnya. Data ini tidak menunjukkan penyebab awal atau pesawat yang terlibat."
+          purpose="Data mengelompokkan menit keterlambatan ke lima kategori; jumlah kategori tidak selalu sama dengan total menit delay. Late-arriving aircraft berarti keterlambatan dari penerbangan sebelumnya terbawa ke penerbangan berikutnya. Data ini tidak menunjukkan penyebab awal atau pesawat yang terlibat."
         />
         <FieldGroup
           title="Periode & dimensi analisis"

@@ -6,7 +6,7 @@ Dashboard analisis deskriptif data penerbangan AS untuk meninjau volume operasi,
 
 - **Deskriptif:** ringkasan metrik dan perbandingan menurut bulan, maskapai, bandara, rute, serta kategori keterlambatan.
 - **Batas interpretasi:** data merupakan agregat bulanan carrier–rute, bukan catatan penerbangan individual. Hasil menunjukkan pola pada data yang tersedia, bukan penyebab keterlambatan atau prediksi kinerja mendatang.
-- **Nama carrier:** CSV menyimpan kode carrier, bukan nama. Dashboard menampilkan nama yang ada pada referensi lokal dan mempertahankan kode lain dengan penanda nama belum tersedia agar tidak menebak identitas. Referensi nama lokal tidak disertai crosswalk resmi bertanggal, sehingga identitas operator perlu dikonfirmasi sebelum dikutip.
+- **Kode carrier:** panel Performa Maskapai menampilkan kode persis seperti yang ada di CSV, tanpa mengganti atau memotongnya.
 
 ## Menjalankan aplikasi
 

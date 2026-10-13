@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
-import { CARRIER_NAMES, FAA_ECONOMIC_CONSTANTS, getCarrierDisplayName } from '../../utils/referenceData';
+import { FAA_ECONOMIC_CONSTANTS } from '../../utils/referenceData';
 import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
 import { InsightCard } from './InsightCard';
@@ -35,7 +35,6 @@ export const CarrierPanel: React.FC = () => {
       string,
       {
         code: string;
-        name: string;
         totalFlights: number;
         scheduledFlights: number;
         delayedFlights: number;
@@ -58,7 +57,6 @@ export const CarrierPanel: React.FC = () => {
       if (!map[code]) {
         map[code] = {
           code,
-          name: getCarrierDisplayName(code),
           totalFlights: 0,
           scheduledFlights: 0,
           delayedFlights: 0,
@@ -113,9 +111,7 @@ export const CarrierPanel: React.FC = () => {
 
   const filteredCarriers = useMemo(() =>
     carrierMetrics.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.code.toLowerCase().includes(searchTerm.toLowerCase())
+      (carrier) => carrier.code.toLowerCase().includes(searchTerm.toLowerCase())
     ), [carrierMetrics, searchTerm]);
   const chartCarriers = metricToggle === 'duration'
     ? filteredCarriers.filter((carrier) => carrier.avgDelay !== null)
@@ -143,7 +139,6 @@ export const CarrierPanel: React.FC = () => {
     null,
   );
   const carrierCodes = new Set(rawRows.map((row) => String(row.UNIQUE_CARRIER || '').trim()).filter(Boolean));
-  const namedCarrierCount = Array.from(carrierCodes).filter((code) => CARRIER_NAMES[code]).length;
 
   return (
     <div className="space-y-6">
@@ -263,7 +258,7 @@ export const CarrierPanel: React.FC = () => {
               <YAxis stroke="#64748b" fontSize={11} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
-                labelFormatter={(code) => getCarrierDisplayName(String(code))}
+                labelFormatter={(code) => String(code)}
               />
               <Bar dataKey={metricToggle === 'rate' ? 'delayRate' : 'avgDelay'} radius={[5, 5, 0, 0]}>
                 {displayedCarriers.map((_, index) => (
@@ -278,9 +273,9 @@ export const CarrierPanel: React.FC = () => {
         </div>
         <InsightCard title="Temuan pada filter ini">
           {highestDelayCarrier && lowestDelayCarrier
-            ? `${highestDelayCarrier.name} memiliki rate tertinggi (${highestDelayCarrier.delayRate}%), ${lowestDelayCarrier.name} terendah (${lowestDelayCarrier.delayRate}%). Rata-rata tertimbang jaringan ${overallDelayRate.toFixed(1)}%.`
+            ? `Kode ${highestDelayCarrier.code} memiliki tingkat tertinggi (${highestDelayCarrier.delayRate}%), sedangkan ${lowestDelayCarrier.code} terendah (${lowestDelayCarrier.delayRate}%). Rata-rata jaringan ${overallDelayRate.toFixed(1)}%.`
             : 'Belum ada cukup data maskapai pada cakupan filter ini.'}{' '}
-          Rate adalah frekuensi, bukan jumlah kasus; volume terbesar ada pada {largestCarrier?.name ?? '—'}
+          Tingkat delay menunjukkan proporsi, bukan jumlah kasus; volume terbesar ada pada kode {largestCarrier?.code ?? '—'}
           {largestCarrier ? ` (${largestCarrier.totalFlights.toLocaleString('id-ID')} keberangkatan)` : ''}.
           Perbedaan ini mencerminkan skala operasi dan proporsi yang berbeda, bukan sebab keterlambatan.
         </InsightCard>
@@ -294,8 +289,8 @@ export const CarrierPanel: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              aria-label="Cari kode atau nama maskapai"
-              placeholder="Cari kode/nama maskapai..."
+              aria-label="Cari kode carrier"
+              placeholder="Cari kode carrier..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400"
@@ -341,11 +336,9 @@ export const CarrierPanel: React.FC = () => {
             </tbody>
           </table>
         </div>
-        <InsightCard title="Cakupan nama carrier">
-          CSV memuat {carrierCodes.size} kode carrier; referensi lokal mengenali {namedCarrierCount} di antaranya.
-          Untuk {carrierCodes.size - namedCarrierCount} kode lain, nama operator tidak tersedia pada kolom dataset
-          maupun kamus lokal dan tidak ditebak. Kode carrier dipertahankan sebagaimana tercatat pada sumber;
-          angka pada tabel merupakan agregat bulanan seluruh rute dalam filter aktif.
+        <InsightCard title="Kode carrier">
+          Dataset memuat {carrierCodes.size} kode carrier. Tabel dan grafik menggunakan kode persis seperti yang
+          tercatat; angka yang ditampilkan merupakan agregat bulanan seluruh rute dalam filter aktif.
         </InsightCard>
         <InsightCard title="Definisi metrik">
           Total penerbangan adalah agregasi seluruh baris dataset untuk setiap kode maskapai. Load factor =
