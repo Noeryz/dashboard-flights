@@ -17,6 +17,10 @@ import type { ActiveMenu } from './types/flight';
 export default function App() {
   const baseUrl = import.meta.env.BASE_URL;
   const [viewState, setViewState] = useState<'HERO' | 'TRANSITION' | 'DASHBOARD'>('HERO');
+  const [dataLoadState, setDataLoadState] = useState<{ status: 'loading' | 'ready' | 'error'; message?: string }>({
+    status: 'loading',
+  });
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const transitionVideoRef = useRef<HTMLVideoElement>(null);
 
   const { setRawRows, setAirportCoords, activeMenu, setActiveMenu, viewMode } = useFlightStore();
@@ -24,17 +28,21 @@ export default function App() {
   useEffect(() => {
     loadAllFlightData()
       .then(({ rows, coords }) => {
-        if (rows && rows.length > 0) {
-          setRawRows(rows);
+        if (!rows.length) {
+          throw new Error('Dataset berhasil diunduh, tetapi tidak berisi baris data.');
         }
-        if (coords) {
-          setAirportCoords(coords);
-        }
+        setRawRows(rows);
+        setAirportCoords(coords);
+        setDataLoadState({ status: 'ready' });
       })
       .catch((err) => {
         console.warn('Gagal memuat dataset:', err);
+        setDataLoadState({
+          status: 'error',
+          message: err instanceof Error ? err.message : 'Terjadi kesalahan yang tidak diketahui.',
+        });
       });
-  }, [setRawRows, setAirportCoords]);
+  }, [loadAttempt, setRawRows, setAirportCoords]);
 
   const handleStartTransition = (targetMenu: ActiveMenu = 'OVERVIEW') => {
     setActiveMenu(targetMenu);
@@ -129,15 +137,46 @@ export default function App() {
                   </span>
                 </div>
 
-                {activeMenu === 'OVERVIEW' && <OverviewPanel />}
-                {activeMenu === 'INSIGHTS' && <ExecutiveInsightsPanel />}
-                {activeMenu === 'AIRLINE' && <CarrierPanel />}
-                {activeMenu === 'AIRPORT' && <AirportPanel />}
-                {activeMenu === 'FACTORS' && <FactorsPanel />}
-                {activeMenu === 'ROUTE' && <RoutePanel />}
-                {activeMenu === 'METHODOLOGY' && <MethodologyPanel />}
+                {dataLoadState.status === 'loading' && (
+                  <section className="rounded-2xl border border-cyan-400/30 bg-slate-900/90 p-8 text-center">
+                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-cyan-300/30 border-t-cyan-300" />
+                    <h1 className="mt-4 text-lg font-bold text-white">Memuat data penerbangan</h1>
+                    <p className="mt-2 text-sm text-slate-300">
+                      Dataset berukuran besar. Angka dan visualisasi akan muncul setelah data selesai dimuat.
+                    </p>
+                  </section>
+                )}
 
-                {viewMode === 'analyst' && <AnalystDataTable />}
+                {dataLoadState.status === 'error' && (
+                  <section className="rounded-2xl border border-rose-400/40 bg-slate-900/90 p-8 text-center">
+                    <h1 className="text-lg font-bold text-white">Data belum berhasil dimuat</h1>
+                    <p className="mt-2 text-sm text-slate-300">{dataLoadState.message}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDataLoadState({ status: 'loading' });
+                        setLoadAttempt((attempt) => attempt + 1);
+                      }}
+                      className="mt-5 rounded-lg border border-cyan-300/50 px-4 py-2 text-sm font-semibold text-cyan-200 hover:bg-cyan-300/10"
+                    >
+                      Coba lagi
+                    </button>
+                  </section>
+                )}
+
+                {dataLoadState.status === 'ready' && (
+                  <>
+                    {activeMenu === 'OVERVIEW' && <OverviewPanel />}
+                    {activeMenu === 'INSIGHTS' && <ExecutiveInsightsPanel />}
+                    {activeMenu === 'AIRLINE' && <CarrierPanel />}
+                    {activeMenu === 'AIRPORT' && <AirportPanel />}
+                    {activeMenu === 'FACTORS' && <FactorsPanel />}
+                    {activeMenu === 'ROUTE' && <RoutePanel />}
+                    {activeMenu === 'METHODOLOGY' && <MethodologyPanel />}
+
+                    {viewMode === 'analyst' && <AnalystDataTable />}
+                  </>
+                )}
               </main>
             </div>
 
