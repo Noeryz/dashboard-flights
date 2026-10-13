@@ -1,6 +1,11 @@
 import React, { useMemo } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { FAA_ECONOMIC_CONSTANTS } from '../../utils/referenceData';
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+} from '../../utils/chartStyles';
 import { AlertTriangle, Clock, CloudRain, ShieldAlert, PlaneTakeoff, Building2 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -120,7 +125,9 @@ export const DelayFactorPanel: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                  contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                  labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                  itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                   formatter={(val) => [`${val}%`, 'Kontribusi']}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
@@ -142,7 +149,9 @@ export const DelayFactorPanel: React.FC = () => {
                 <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickFormatter={(val) => val.split(' ')[0]} />
                 <YAxis stroke="#64748b" fontSize={11} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                  contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                  labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                  itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                 />
                 <Bar dataKey="millions" name="Juta Menit" radius={[4, 4, 0, 0]}>
                   {factorMetrics.map((entry, index) => (

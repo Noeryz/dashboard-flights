@@ -1,6 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+} from '../../utils/chartStyles';
 import { Sliders, Play, Pause, ZoomIn, RotateCcw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 import { InsightCard } from './InsightCard';
@@ -139,7 +144,9 @@ export const FactorsPanel: React.FC = () => {
               <XAxis dataKey="factor" stroke="#94a3b8" fontSize={11} tickLine={false} />
               <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
+                contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                 formatter={(val) => [`${Number(val).toLocaleString('id-ID')} Menit`, 'Total Delay']}
               />
               <Bar dataKey="minutes" radius={[6, 6, 0, 0]}>

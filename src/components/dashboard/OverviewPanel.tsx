@@ -1,6 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { MONTH_NAMES_FULL, MONTH_NAMES_SHORT } from '../../utils/constants';
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+} from '../../utils/chartStyles';
 import { InsightCard } from './InsightCard';
 import {
   Activity,
@@ -370,12 +375,9 @@ export const OverviewPanel: React.FC = () => {
                   <YAxis yAxisId="volume" stroke="#94a3b8" fontSize={10} tickLine={false} />
                   <YAxis yAxisId="rate" orientation="right" stroke="#fda4af" fontSize={10} tickLine={false} unit="%" />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#020617',
-                      borderColor: '#06b6d4',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                    }}
+                    contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                    labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                    itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                     formatter={(value, name) => [
                       name === 'Tingkat delay'
                         ? value == null ? 'Tidak tersedia' : `${Number(value).toFixed(1)}%`
@@ -434,7 +436,9 @@ export const OverviewPanel: React.FC = () => {
                   <XAxis dataKey="carrier" stroke="#94a3b8" fontSize={11} tickLine={false} />
                   <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
+                    contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                    labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                    itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                     formatter={(val) => [Number(val).toLocaleString('id-ID'), 'Jumlah Penerbangan']}
                     labelFormatter={(carrier) => getCarrierDisplayName(String(carrier))}
                   />

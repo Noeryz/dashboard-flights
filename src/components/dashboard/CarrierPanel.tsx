@@ -3,6 +3,11 @@ import { useFlightStore } from '../../store/useFlightStore';
 import { FAA_ECONOMIC_CONSTANTS } from '../../utils/referenceData';
 import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+} from '../../utils/chartStyles';
 import { InsightCard } from './InsightCard';
 import { Building2, Search, Play, Pause, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import {
@@ -277,7 +282,9 @@ export const CarrierPanel: React.FC = () => {
               <XAxis dataKey="code" stroke="#64748b" fontSize={11} />
               <YAxis stroke="#64748b" fontSize={11} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                 labelFormatter={(code) => String(code)}
               />
               <Bar dataKey={metricToggle === 'rate' ? 'delayRate' : 'avgDelay'} radius={[5, 5, 0, 0]}>
@@ -318,7 +325,9 @@ export const CarrierPanel: React.FC = () => {
               <YAxis yAxisId="volume" stroke="#94a3b8" fontSize={10} tickLine={false} />
               <YAxis yAxisId="rate" orientation="right" stroke="#fda4af" fontSize={10} tickLine={false} unit="%" />
               <Tooltip
-                contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
+                contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                 formatter={(value, name) => [
                   name === 'Tingkat delay' ? `${Number(value).toFixed(1)}%` : Number(value).toLocaleString('id-ID'),
                   name,

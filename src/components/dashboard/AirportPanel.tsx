@@ -2,6 +2,11 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { getDelayDurationObservation } from '../../utils/flightAnalytics';
 import { MONTH_NAMES_FULL } from '../../utils/constants';
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+} from '../../utils/chartStyles';
 import { Building2, MapPin, Globe, Play, Pause, ZoomIn, ZoomOut, RotateCcw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Bar,
@@ -210,7 +215,9 @@ export const AirportPanel: React.FC = () => {
                 <YAxis yAxisId="volume" stroke="#94a3b8" fontSize={10} tickLine={false} />
                 <YAxis yAxisId="rate" orientation="right" stroke="#fda4af" fontSize={10} tickLine={false} unit="%" />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#020617', borderColor: '#06b6d4', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                  labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                  itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                   formatter={(value, name) => [
                     name === 'Tingkat delay'
                       ? `${Number(value).toFixed(1)}%`

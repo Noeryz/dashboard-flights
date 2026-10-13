@@ -2,6 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
 import { CARRIER_NAMES, FAA_ECONOMIC_CONSTANTS, getCarrierDisplayName } from '../../utils/referenceData';
 import { getDelayDurationObservation } from '../../utils/flightAnalytics';
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+} from '../../utils/chartStyles';
 import { Building2, Search } from 'lucide-react';
 import { InsightCard } from './InsightCard';
 import {
@@ -188,7 +193,9 @@ export const AirlinePanel: React.FC = () => {
               <XAxis dataKey="code" stroke="#64748b" fontSize={11} />
               <YAxis stroke="#64748b" fontSize={11} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                itemStyle={CHART_TOOLTIP_ITEM_STYLE}
               />
               <Bar
                 dataKey={metricToggle === 'rate' ? 'delayRate' : 'avgDelay'}

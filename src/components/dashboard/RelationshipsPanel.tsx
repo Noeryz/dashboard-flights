@@ -11,6 +11,11 @@ import {
 } from 'recharts';
 import { useFlightStore } from '../../store/useFlightStore';
 import { analyzeFlights, type CorrelationResult } from '../../utils/flightAnalytics';
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+} from '../../utils/chartStyles';
 import { InsightCard } from './InsightCard';
 
 const strengthDescription = (rho: number): string => {
@@ -81,7 +86,9 @@ const CorrelationCard: React.FC<{
               />
               <Tooltip
                 cursor={{ strokeDasharray: '3 3' }}
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#22d3ee', borderRadius: '12px', fontSize: '12px', boxShadow: '0 12px 30px rgba(0,0,0,.35)' }}
+                contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                itemStyle={CHART_TOOLTIP_ITEM_STYLE}
                 formatter={(value, name) => [
                   name === 'Durasi rata-rata'
                     ? `${Number(value).toFixed(1)} menit`
