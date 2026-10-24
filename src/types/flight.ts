@@ -1,6 +1,6 @@
 export type ActiveMenu =
   | 'OVERVIEW'
-  | 'INSIGHTS'
+  | 'RELATIONSHIPS'
   | 'AIRLINE'
   | 'ROUTE'
   | 'AIRPORT'

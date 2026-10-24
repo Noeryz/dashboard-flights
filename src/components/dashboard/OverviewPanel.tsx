@@ -7,6 +7,7 @@ import {
   CHART_TOOLTIP_LABEL_STYLE,
 } from '../../utils/chartStyles';
 import { InsightCard } from './InsightCard';
+import { ExecutiveInsightsPanel } from './ExecutiveInsightsPanel';
 import {
   Activity,
   Users,
@@ -458,6 +459,8 @@ export const OverviewPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ExecutiveInsightsPanel />
     </div>
   );
 };

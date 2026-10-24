@@ -5,7 +5,9 @@ Dashboard analisis deskriptif data penerbangan AS untuk meninjau volume penerban
 ## Lingkup analisis
 
 - **Deskriptif:** ringkasan metrik dan perbandingan menurut bulan, maskapai, bandara, rute, serta kategori keterlambatan.
-- **Batas interpretasi:** data merupakan agregat bulanan carrier–rute, bukan catatan penerbangan individual. Hasil menunjukkan pola pada data yang tersedia, bukan penyebab keterlambatan atau prediksi kinerja mendatang.
+- **Hubungan & kausalitas:** menu khusus memuat enam korelasi dan lima analisis panel terkontrol. Estimasi panel menyesuaikan faktor terukur seperti carrier–rute dan periode, tetapi tetap ditafsirkan sebagai asosiasi, bukan bukti sebab-akibat.
+- **Batas interpretasi:** data merupakan agregat bulanan carrier–rute, bukan catatan penerbangan individual. Hasil tidak melacak pesawat atau penerbangan antarbulan, dan tidak memuat semua faktor seperti cuaca eksternal maupun jam operasi; karena itu hasil tidak menetapkan penyebab keterlambatan atau memprediksi kinerja mendatang.
+- **Wawasan operasional:** ditampilkan sebagai bagian dari Ringkasan Utama, bukan menu terpisah.
 - **Kode carrier:** panel Performa Maskapai menampilkan kode persis seperti yang ada di CSV, tanpa mengganti atau memotongnya.
 
 ## Menjalankan aplikasi

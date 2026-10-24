@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFlightStore } from '../../store/useFlightStore';
-import { Plane, LayoutDashboard, Compass, BarChart3, Route as RouteIcon, Building2, Sliders, BookOpenCheck, User } from 'lucide-react';
+import { Plane, LayoutDashboard, Network, BarChart3, Route as RouteIcon, Building2, Sliders, BookOpenCheck, User } from 'lucide-react';
 import type { ActiveMenu } from '../../types/flight';
 
 interface NavbarProps {
@@ -12,7 +12,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onReturnHero }) => {
 
   const navItems: { id: ActiveMenu; label: string; icon: React.ElementType }[] = [
     { id: 'OVERVIEW', label: 'Ringkasan Utama', icon: LayoutDashboard },
-    { id: 'INSIGHTS', label: 'Wawasan Operasional', icon: Compass },
+    { id: 'RELATIONSHIPS', label: 'Hubungan & Kausalitas', icon: Network },
     { id: 'AIRLINE', label: 'Performa Maskapai', icon: BarChart3 },
     { id: 'ROUTE', label: 'Analisis Rute', icon: RouteIcon },
     { id: 'AIRPORT', label: 'Aktivitas Bandara', icon: Building2 },

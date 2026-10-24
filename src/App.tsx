@@ -6,13 +6,13 @@ import { LandingHero } from './components/cinematic/LandingHero';
 import { Navbar } from './components/navigation/Navbar';
 import { Sidebar } from './components/navigation/Sidebar';
 import { OverviewPanel } from './components/dashboard/OverviewPanel';
-import { ExecutiveInsightsPanel } from './components/dashboard/ExecutiveInsightsPanel';
 import { CarrierPanel } from './components/dashboard/CarrierPanel';
 import { AirportPanel } from './components/dashboard/AirportPanel';
 import { FactorsPanel } from './components/dashboard/FactorsPanel';
 import { RoutePanel } from './components/dashboard/RoutePanel';
 import { AnalystDataTable } from './components/dashboard/AnalystDataTable';
 import { MethodologyPanel } from './components/dashboard/MethodologyPanel';
+import { RelationshipsPanel } from './components/dashboard/RelationshipsPanel';
 import type { ActiveMenu } from './types/flight';
 
 export default function App() {
@@ -185,7 +185,7 @@ export default function App() {
                 {dataLoadState.status === 'ready' && (
                   <>
                     {activeMenu === 'OVERVIEW' && <OverviewPanel />}
-                    {activeMenu === 'INSIGHTS' && <ExecutiveInsightsPanel />}
+                    {activeMenu === 'RELATIONSHIPS' && <RelationshipsPanel />}
                     {activeMenu === 'AIRLINE' && <CarrierPanel />}
                     {activeMenu === 'AIRPORT' && <AirportPanel />}
                     {activeMenu === 'FACTORS' && <FactorsPanel />}
