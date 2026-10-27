@@ -133,7 +133,7 @@ const averageRanks = (values: number[]): number[] => {
   return ranks;
 };
 
-const spearmanCorrelation = (x: number[], y: number[]): number | null => {
+export const spearmanCorrelation = (x: number[], y: number[]): number | null => {
   if (x.length !== y.length || x.length < 3) return null;
 
   const rankedX = averageRanks(x);

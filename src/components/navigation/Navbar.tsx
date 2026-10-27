@@ -12,7 +12,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onReturnHero }) => {
 
   const navItems: { id: ActiveMenu; label: string; icon: React.ElementType }[] = [
     { id: 'OVERVIEW', label: 'Ringkasan Utama', icon: LayoutDashboard },
-    { id: 'RELATIONSHIPS', label: 'Hubungan & Kausalitas', icon: Network },
+    { id: 'RELATIONSHIPS', label: 'Korelasi & Sebab-Akibat', icon: Network },
     { id: 'AIRLINE', label: 'Performa Maskapai', icon: BarChart3 },
     { id: 'ROUTE', label: 'Analisis Rute', icon: RouteIcon },
     { id: 'AIRPORT', label: 'Aktivitas Bandara', icon: Building2 },

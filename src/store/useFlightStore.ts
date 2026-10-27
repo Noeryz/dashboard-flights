@@ -7,6 +7,7 @@ interface FlightStore {
   airportCoords: Record<string, AirportCoord>;
   activeMenu: ActiveMenu;
   viewMode: ViewMode;
+  routeFilterEnabled: boolean;
   filters: FilterState;
 
   setRawRows: (rows: RawFlightRow[]) => void;
@@ -37,11 +38,26 @@ const initialFilters: FilterState = {
   destination: 'JFK',
 };
 
+const normalizeFilterValue = (value: string | undefined): string => String(value ?? '').trim();
+
+const matchesRouteFilter = (row: RawFlightRow, filters: FilterState): boolean => {
+  const rowOrigin = normalizeFilterValue(row.ORIGIN).toUpperCase();
+  const rowDestination = normalizeFilterValue(row.DEST).toUpperCase();
+  const originFilter = normalizeFilterValue(filters.origin).toUpperCase();
+  const destinationFilter = normalizeFilterValue(filters.destination).toUpperCase();
+
+  if (originFilter && rowOrigin !== originFilter) return false;
+  if (destinationFilter && rowDestination !== destinationFilter) return false;
+
+  return true;
+};
+
 export const useFlightStore = create<FlightStore>((set, get) => ({
   rawRows: [],
   airportCoords: {},
   activeMenu: 'OVERVIEW',
   viewMode: 'public',
+  routeFilterEnabled: false,
   filters: initialFilters,
 
   setRawRows: (rows) => set({ rawRows: rows || [] }),
@@ -57,6 +73,10 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
       const airports = state.getAirportsForOriginCity(value);
       const defaultApt = airports.length > 0 ? airports[0].code : 'ATL';
       newFilters.origin = defaultApt;
+      const originAirport = state.rawRows.find((row) => String(row.ORIGIN || '').trim().toUpperCase() === defaultApt);
+      if (originAirport && originAirport.ORIGIN_CITY_NAME) {
+        newFilters.originCity = String(originAirport.ORIGIN_CITY_NAME).trim();
+      }
 
       const destCities = state.getAvailableDestinationCities(defaultApt);
       const defaultDestCity = destCities.length > 0 ? destCities[0] : 'New York, NY';
@@ -65,6 +85,11 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
       const destAirports = state.getAirportsForDestinationCity(defaultApt, defaultDestCity);
       newFilters.destination = destAirports.length > 0 ? destAirports[0].code : 'JFK';
     } else if (key === 'origin') {
+      const originAirport = state.rawRows.find((row) => String(row.ORIGIN || '').trim().toUpperCase() === value);
+      if (originAirport && originAirport.ORIGIN_CITY_NAME) {
+        newFilters.originCity = String(originAirport.ORIGIN_CITY_NAME).trim();
+      }
+
       const destCities = state.getAvailableDestinationCities(value);
       const defaultDestCity = destCities.length > 0 ? destCities[0] : 'New York, NY';
       newFilters.destinationCity = defaultDestCity;
@@ -74,13 +99,33 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
     } else if (key === 'destinationCity') {
       const destAirports = state.getAirportsForDestinationCity(newFilters.origin, value);
       newFilters.destination = destAirports.length > 0 ? destAirports[0].code : 'JFK';
+      const destinationAirport = state.rawRows.find(
+        (row) => String(row.DEST || '').trim().toUpperCase() === newFilters.destination,
+      );
+      if (destinationAirport && destinationAirport.DEST_CITY_NAME) {
+        newFilters.destinationCity = String(destinationAirport.DEST_CITY_NAME).trim();
+      }
+    } else if (key === 'destination') {
+      const destinationAirport = state.rawRows.find(
+        (row) => String(row.DEST || '').trim().toUpperCase() === value,
+      );
+      if (destinationAirport && destinationAirport.DEST_CITY_NAME) {
+        newFilters.destinationCity = String(destinationAirport.DEST_CITY_NAME).trim();
+      }
     }
 
-    set({ filters: newFilters });
+    const routeFilterEnabled = state.routeFilterEnabled || [
+      'originCity',
+      'origin',
+      'destinationCity',
+      'destination',
+    ].includes(key);
+    set({ filters: newFilters, routeFilterEnabled });
   },
 
   setRouteSelection: (originCity, originApt, destCity, destApt) => {
     set((state) => ({
+      routeFilterEnabled: true,
       filters: {
         ...state.filters,
         originCity,
@@ -91,7 +136,7 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
     }));
   },
 
-  resetFilters: () => set({ filters: initialFilters }),
+  resetFilters: () => set({ filters: initialFilters, routeFilterEnabled: false }),
 
   swapRoute: () => {
     const { filters, getAvailableDestinationCities, getAirportsForDestinationCity } = get();
@@ -111,6 +156,7 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
     }
 
     set({
+      routeFilterEnabled: true,
       filters: {
         ...filters,
         originCity: newOriginCity,
@@ -178,7 +224,7 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
   },
 
   getFilteredRows: () => {
-    const { rawRows, filters } = get();
+    const { rawRows, filters, routeFilterEnabled } = get();
     if (!rawRows || rawRows.length === 0) return [];
 
     return rawRows.filter((row) => {
@@ -189,13 +235,14 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
       if (filters.year !== 'ALL' && rowYear !== filters.year) return false;
       if (filters.month !== 'ALL' && rowMonth !== filters.month) return false;
       if (filters.carrier !== 'ALL' && rowCarrier !== filters.carrier) return false;
+      if (routeFilterEnabled && !matchesRouteFilter(row, filters)) return false;
 
       return true;
     });
   },
 
   getFilteredRowsIgnoreCarrier: () => {
-    const { rawRows, filters } = get();
+    const { rawRows, filters, routeFilterEnabled } = get();
     if (!rawRows || rawRows.length === 0) return [];
 
     return rawRows.filter((row) => {
@@ -204,6 +251,7 @@ export const useFlightStore = create<FlightStore>((set, get) => ({
 
       if (filters.year !== 'ALL' && rowYear !== filters.year) return false;
       if (filters.month !== 'ALL' && rowMonth !== filters.month) return false;
+      if (routeFilterEnabled && !matchesRouteFilter(row, filters)) return false;
 
       return true;
     });

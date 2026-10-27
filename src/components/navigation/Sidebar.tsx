@@ -9,7 +9,16 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { rawRows, filters, setFilter, resetFilters, viewMode, setViewMode, getFilteredRows } = useFlightStore();
+  const {
+    rawRows,
+    filters,
+    routeFilterEnabled,
+    setFilter,
+    resetFilters,
+    viewMode,
+    setViewMode,
+    getFilteredRows,
+  } = useFlightStore();
   const filteredRows = getFilteredRows();
   const carrierCodes = useMemo(
     () => Array.from(new Set(rawRows.map((row) => String(row.UNIQUE_CARRIER || '').trim()).filter(Boolean))).sort(),
@@ -140,6 +149,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         <p className="text-xs font-medium text-slate-400">Baris pada filter</p>
         <p className="text-sm font-bold text-cyan-400">
           {filteredRows.length.toLocaleString('id-ID')} baris agregat
+        </p>
+        <p className="pt-1 font-sans text-[10px] leading-relaxed text-slate-400">
+          {routeFilterEnabled
+            ? `Rute ${filters.origin} → ${filters.destination} diterapkan pada baris data di seluruh dashboard.`
+            : 'Semua rute disertakan. Pilih rute di Analisis Rute untuk menerapkannya ke seluruh dashboard.'}
         </p>
       </div>
     </aside>
