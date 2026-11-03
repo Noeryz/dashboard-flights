@@ -1,0 +1,139 @@
+{
+  "event": "Penghentian sementara operasi Boeing 737 MAX 9",
+  "event_date": "2024-01-06",
+  "pre_period": {
+    "start": "2024-01-01",
+    "end": "2024-01-05",
+    "days": 5
+  },
+  "post_period": {
+    "start": "2024-01-06",
+    "end": "2024-01-31",
+    "days": 26
+  },
+  "treated_carriers": [
+    "AS",
+    "UA"
+  ],
+  "control_carriers": [
+    "9E",
+    "AA",
+    "B6",
+    "DL",
+    "F9",
+    "G4",
+    "HA",
+    "MQ",
+    "NK",
+    "OH",
+    "OO",
+    "WN",
+    "YX"
+  ],
+  "carrier_count": 15,
+  "metrics": [
+    {
+      "id": "arrival_delay_rate",
+      "label": "Proporsi keterlambatan kedatangan",
+      "unit": "poin persentase",
+      "treated": {
+        "pre": {
+          "numerator": 1511,
+          "denominator": 13031,
+          "rate": 11.595426291151869
+        },
+        "post": {
+          "numerator": 14143,
+          "denominator": 55467,
+          "rate": 25.498043881947822
+        }
+      },
+      "control": {
+        "pre": {
+          "numerator": 11871,
+          "denominator": 77669,
+          "rate": 15.284090177548315
+        },
+        "post": {
+          "numerator": 98885,
+          "denominator": 379203,
+          "rate": 26.07706162662215
+        }
+      },
+      "treated_change": 13.902617590795954,
+      "control_change": 10.792971449073836,
+      "did": 3.109646141722118
+    },
+    {
+      "id": "departure_delay_rate",
+      "label": "Proporsi keterlambatan keberangkatan",
+      "unit": "poin persentase",
+      "treated": {
+        "pre": {
+          "numerator": 1582,
+          "denominator": 13047,
+          "rate": 12.125392810607803
+        },
+        "post": {
+          "numerator": 13955,
+          "denominator": 55750,
+          "rate": 25.031390134529147
+        }
+      },
+      "control": {
+        "pre": {
+          "numerator": 12817,
+          "denominator": 77746,
+          "rate": 16.485735600545365
+        },
+        "post": {
+          "numerator": 93585,
+          "denominator": 380339,
+          "rate": 24.605680721671984
+        }
+      },
+      "treated_change": 12.905997323921344,
+      "control_change": 8.11994512112662,
+      "did": 4.786052202794725
+    },
+    {
+      "id": "cancellation_rate",
+      "label": "Tingkat pembatalan",
+      "unit": "poin persentase",
+      "treated": {
+        "pre": {
+          "numerator": 34,
+          "denominator": 13081,
+          "rate": 0.2599189664398746
+        },
+        "post": {
+          "numerator": 7799,
+          "denominator": 63549,
+          "rate": 12.272419707627186
+        }
+      },
+      "control": {
+        "pre": {
+          "numerator": 110,
+          "denominator": 77856,
+          "rate": 0.14128647759967117
+        },
+        "post": {
+          "numerator": 12446,
+          "denominator": 392785,
+          "rate": 3.168654607482465
+        }
+      },
+      "treated_change": 12.012500741187312,
+      "control_change": 3.0273681298827935,
+      "did": 8.985132611304518
+    }
+  ],
+  "method": "Difference-in-differences on pooled daily carrier counts. DiD = (treated post - treated pre) - (control post - control pre).",
+  "limitations": [
+    "BTS aggregates are by carrier and date; aircraft type is not recorded in this analysis. AS and UA indicate carrier-level exposure proxies, not verified MAX 9 flights.",
+    "Only five pre-event days are available, so parallel pre-trends cannot be credibly assessed.",
+    "There are only two treated carriers and other contemporaneous carrier-specific events may confound the estimate.",
+    "No confidence interval or p-value is reported; interpret these as exploratory DiD estimates, not definitive causal effects."
+  ]
+}
