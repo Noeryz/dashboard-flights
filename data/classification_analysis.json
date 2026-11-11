@@ -1,0 +1,526 @@
+{
+  "model": {
+    "algorithm": "Decision Tree Classifier",
+    "criterion": "entropy",
+    "max_depth": 4,
+    "min_samples_leaf": 80,
+    "random_state": 42
+  },
+  "target": {
+    "positive_class": 1,
+    "positive_label": "Naik",
+    "negative_class": 0,
+    "negative_label": "Tidak Naik",
+    "definition": "delay rate bulan target > delay rate bulan sebelumnya"
+  },
+  "data": {
+    "source": "public/data/data_dashboard_ontime_monthly.csv.gz",
+    "source_rows": 234892,
+    "duplicate_route_month_keys": 0,
+    "consecutive_pairs": 211520,
+    "usable_observations": 211426,
+    "excluded_incomplete_pairs": 94,
+    "missing_source_values": {
+      "SEAT_LOAD_FACTOR": 133
+    },
+    "train": {
+      "periods": [
+        "2024-02",
+        "2024-03",
+        "2024-04",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-08",
+        "2024-09",
+        "2024-10",
+        "2024-11",
+        "2024-12",
+        "2025-01",
+        "2025-02",
+        "2025-03",
+        "2025-04",
+        "2025-05",
+        "2025-06",
+        "2025-07"
+      ],
+      "sample_size": 165589,
+      "class_counts": {
+        "0": 83557,
+        "1": 82032
+      }
+    },
+    "test": {
+      "periods": [
+        "2025-08",
+        "2025-09",
+        "2025-10",
+        "2025-11",
+        "2025-12"
+      ],
+      "sample_size": 45837,
+      "class_counts": {
+        "0": 24404,
+        "1": 21433
+      }
+    }
+  },
+  "features": [
+    {
+      "key": "delay_rate_lag1_pct",
+      "label": "Delay rate t−1 (%)",
+      "source": "ARR_DELAY_FLIGHTS / ARRIVAL_OBSERVATIONS",
+      "transform": "count ratio × 100",
+      "value": 0.6992322737678311
+    },
+    {
+      "key": "target_month",
+      "label": "Target month (1–12)",
+      "source": "MONTH",
+      "transform": "known calendar month",
+      "value": 0.2961159954949092
+    },
+    {
+      "key": "scheduled_flights_log1p",
+      "label": "Scheduled flights (log1p)",
+      "source": "SCHEDULED_FLIGHTS",
+      "transform": "log1p",
+      "value": 0.004651730737259588
+    },
+    {
+      "key": "cancel_rate_lag1_pct",
+      "label": "Cancel rate t−1 (%)",
+      "source": "CANCELLED_FLIGHTS / SCHEDULED_FLIGHTS",
+      "transform": "count ratio × 100",
+      "value": 0.0
+    },
+    {
+      "key": "distance_miles",
+      "label": "Route distance (miles)",
+      "source": "DISTANCE",
+      "transform": "as recorded",
+      "value": 0.0
+    },
+    {
+      "key": "diversion_rate_lag1_pct",
+      "label": "Diversion rate t−1 (%)",
+      "source": "DIVERTED_FLIGHTS / DEPARTURES_PERFORMED",
+      "transform": "count ratio × 100",
+      "value": 0.0
+    },
+    {
+      "key": "seat_occupancy_pct",
+      "label": "Seat occupancy (%)",
+      "source": "SEAT_LOAD_FACTOR",
+      "transform": "ratio × 100",
+      "value": 0.0
+    }
+  ],
+  "decision_tree": {
+    "id": 0,
+    "samples": 165589,
+    "class_counts": {
+      "0": 83557,
+      "1": 82032
+    },
+    "predicted_class": 0,
+    "impurity": 0.9999388174740411,
+    "left": {
+      "id": 1,
+      "samples": 80014,
+      "class_counts": {
+        "0": 27561,
+        "1": 52453
+      },
+      "predicted_class": 1,
+      "impurity": 0.9290155879660531,
+      "left": {
+        "id": 2,
+        "samples": 42541,
+        "class_counts": {
+          "0": 11450,
+          "1": 31091
+        },
+        "predicted_class": 1,
+        "impurity": 0.8402453375885559,
+        "left": {
+          "id": 3,
+          "samples": 38367,
+          "class_counts": {
+            "0": 10954,
+            "1": 27413
+          },
+          "predicted_class": 1,
+          "impurity": 0.8628447763052667,
+          "left": {
+            "id": 4,
+            "samples": 27368,
+            "class_counts": {
+              "0": 6992,
+              "1": 20376
+            },
+            "predicted_class": 1,
+            "impurity": 0.8198500591830133,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 5,
+            "samples": 10999,
+            "class_counts": {
+              "0": 3962,
+              "1": 7037
+            },
+            "predicted_class": 1,
+            "impurity": 0.9428611501388597,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "target_month",
+          "threshold": 7.5
+        },
+        "right": {
+          "id": 6,
+          "samples": 4174,
+          "class_counts": {
+            "0": 496,
+            "1": 3678
+          },
+          "predicted_class": 1,
+          "impurity": 0.5259908383320926,
+          "left": {
+            "id": 7,
+            "samples": 2931,
+            "class_counts": {
+              "0": 452,
+              "1": 2479
+            },
+            "predicted_class": 1,
+            "impurity": 0.6202851040881598,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 8,
+            "samples": 1243,
+            "class_counts": {
+              "0": 44,
+              "1": 1199
+            },
+            "predicted_class": 1,
+            "impurity": 0.220779923471073,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "scheduled_flights_log1p",
+          "threshold": 4.29726243019104
+        },
+        "feature_key": "target_month",
+        "threshold": 11.5
+      },
+      "right": {
+        "id": 9,
+        "samples": 37473,
+        "class_counts": {
+          "0": 16111,
+          "1": 21362
+        },
+        "predicted_class": 1,
+        "impurity": 0.9857890909510891,
+        "left": {
+          "id": 10,
+          "samples": 26912,
+          "class_counts": {
+            "0": 10469,
+            "1": 16443
+          },
+          "predicted_class": 1,
+          "impurity": 0.9641567956140887,
+          "left": {
+            "id": 11,
+            "samples": 15715,
+            "class_counts": {
+              "0": 7166,
+              "1": 8549
+            },
+            "predicted_class": 1,
+            "impurity": 0.9944060045698341,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 12,
+            "samples": 11197,
+            "class_counts": {
+              "0": 3303,
+              "1": 7894
+            },
+            "predicted_class": 1,
+            "impurity": 0.8750798771932384,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "target_month",
+          "threshold": 4.5
+        },
+        "right": {
+          "id": 13,
+          "samples": 10561,
+          "class_counts": {
+            "0": 5642,
+            "1": 4919
+          },
+          "predicted_class": 0,
+          "impurity": 0.9966166198935112,
+          "left": {
+            "id": 14,
+            "samples": 8099,
+            "class_counts": {
+              "0": 4993,
+              "1": 3106
+            },
+            "predicted_class": 0,
+            "impurity": 0.9604793335927876,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 15,
+            "samples": 2462,
+            "class_counts": {
+              "0": 649,
+              "1": 1813
+            },
+            "predicted_class": 1,
+            "impurity": 0.8321404897023293,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "target_month",
+          "threshold": 11.5
+        },
+        "feature_key": "target_month",
+        "threshold": 7.5
+      },
+      "feature_key": "delay_rate_lag1_pct",
+      "threshold": 12.155779838562012
+    },
+    "right": {
+      "id": 16,
+      "samples": 85575,
+      "class_counts": {
+        "0": 55996,
+        "1": 29579
+      },
+      "predicted_class": 0,
+      "impurity": 0.9301230353970219,
+      "left": {
+        "id": 17,
+        "samples": 54650,
+        "class_counts": {
+          "0": 32193,
+          "1": 22457
+        },
+        "predicted_class": 0,
+        "impurity": 0.9769831398241859,
+        "left": {
+          "id": 18,
+          "samples": 41796,
+          "class_counts": {
+            "0": 23014,
+            "1": 18782
+          },
+          "predicted_class": 0,
+          "impurity": 0.9925918301832752,
+          "left": {
+            "id": 19,
+            "samples": 21509,
+            "class_counts": {
+              "0": 14444,
+              "1": 7065
+            },
+            "predicted_class": 0,
+            "impurity": 0.9133525990767272,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 20,
+            "samples": 20287,
+            "class_counts": {
+              "0": 8570,
+              "1": 11717
+            },
+            "predicted_class": 1,
+            "impurity": 0.9825715977869225,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "target_month",
+          "threshold": 4.5
+        },
+        "right": {
+          "id": 21,
+          "samples": 12854,
+          "class_counts": {
+            "0": 9179,
+            "1": 3675
+          },
+          "predicted_class": 0,
+          "impurity": 0.8633702009916272,
+          "left": {
+            "id": 22,
+            "samples": 10902,
+            "class_counts": {
+              "0": 8219,
+              "1": 2683
+            },
+            "predicted_class": 0,
+            "impurity": 0.8050406873334774,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 23,
+            "samples": 1952,
+            "class_counts": {
+              "0": 960,
+              "1": 992
+            },
+            "predicted_class": 1,
+            "impurity": 0.9998061328047111,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "target_month",
+          "threshold": 11.5
+        },
+        "feature_key": "target_month",
+        "threshold": 7.5
+      },
+      "right": {
+        "id": 24,
+        "samples": 30925,
+        "class_counts": {
+          "0": 23803,
+          "1": 7122
+        },
+        "predicted_class": 0,
+        "impurity": 0.7785323564635548,
+        "left": {
+          "id": 25,
+          "samples": 10094,
+          "class_counts": {
+            "0": 8525,
+            "1": 1569
+          },
+          "predicted_class": 0,
+          "impurity": 0.6232853650408932,
+          "left": {
+            "id": 26,
+            "samples": 7525,
+            "class_counts": {
+              "0": 6219,
+              "1": 1306
+            },
+            "predicted_class": 0,
+            "impurity": 0.6657724467890502,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 27,
+            "samples": 2569,
+            "class_counts": {
+              "0": 2306,
+              "1": 263
+            },
+            "predicted_class": 0,
+            "impurity": 0.47647759390865596,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "delay_rate_lag1_pct",
+          "threshold": 46.70103073120117
+        },
+        "right": {
+          "id": 28,
+          "samples": 20831,
+          "class_counts": {
+            "0": 15278,
+            "1": 5553
+          },
+          "predicted_class": 0,
+          "impurity": 0.8365052597404761,
+          "left": {
+            "id": 29,
+            "samples": 13271,
+            "class_counts": {
+              "0": 8819,
+              "1": 4452
+            },
+            "predicted_class": 0,
+            "impurity": 0.9204160347833137,
+            "left": null,
+            "right": null
+          },
+          "right": {
+            "id": 30,
+            "samples": 7560,
+            "class_counts": {
+              "0": 6459,
+              "1": 1101
+            },
+            "predicted_class": 0,
+            "impurity": 0.5988080177660434,
+            "left": null,
+            "right": null
+          },
+          "feature_key": "target_month",
+          "threshold": 7.5
+        },
+        "feature_key": "target_month",
+        "threshold": 4.5
+      },
+      "feature_key": "delay_rate_lag1_pct",
+      "threshold": 32.30027198791504
+    },
+    "feature_key": "delay_rate_lag1_pct",
+    "threshold": 19.133118629455566
+  },
+  "evaluation": {
+    "train": {
+      "accuracy": 0.6855225890608676,
+      "precision": 0.6590904263228328,
+      "recall": 0.7564852740393992,
+      "f1": 0.7044373559760707
+    },
+    "test": {
+      "accuracy": 0.6905992975107446,
+      "precision": 0.7143617335777213,
+      "recall": 0.5637101665655765,
+      "f1": 0.6301569916027747
+    },
+    "baseline": {
+      "class": 0,
+      "label": "Tidak Naik",
+      "accuracy_test": 0.532408316425595
+    },
+    "confusion_matrix": {
+      "labels": [
+        0,
+        1
+      ],
+      "matrix": [
+        [
+          19573,
+          4831
+        ],
+        [
+          9351,
+          12082
+        ]
+      ]
+    }
+  }
+}
